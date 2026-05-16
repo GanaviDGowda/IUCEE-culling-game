@@ -1,26 +1,520 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   KOGANE PROTOCOL — Design Tokens
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Core */
+  --color-void:      #050505;
+  --color-charcoal:  #0B0B0F;
+  --color-blood:     #8B0000;
+  --color-crimson:   #DC2626;
+  --color-deep-red:  #450A0A;
+
+  /* KOGANE System Interface */
+  --bone:            #E8E4DC;
+  --gold-dim:        #C9A84C;
+  --gold-faint:      #8B6914;
+  --muted:      oklch(0.97 0 0);
+  --muted-dark:      #374151;
+
+  /* Legacy aliases */
+  --color-text:      #E8E4DC;
+  --color-muted:     #6B7280;
+
+  /* Status */
+  --status-active:   #C9A84C;
+  --status-danger:   #DC2626;
+  --status-century:  #DC2626;
+  --status-removed:  #4B1111;
+  --background:      #050505;
+  --foreground:      #E8E4DC;
+  --card:            rgba(10, 10, 10, 0.55);
+  --card-foreground: #E8E4DC;
+  --popover:         #0B0B0F;
+  --popover-foreground: #E8E4DC;
+  --primary:         #8B0000;
+  --primary-foreground: #E8E4DC;
+  --secondary:       #0B0B0F;
+  --secondary-foreground: #E8E4DC;
+  --muted:           #0B0B0F;
+  --muted-foreground: #6B7280;
+  --accent:          rgba(139, 0, 0, 0.25);
+  --accent-foreground: #E8E4DC;
+  --destructive:     #DC2626;
+  --border:          rgba(139, 0, 0, 0.2);
+  --input:           rgba(255, 255, 255, 0.08);
+  --ring:            rgba(220, 38, 38, 0.5);
+  --chart-1:         #DC2626;
+  --chart-2:         #8B0000;
+  --chart-3:         #6B7280;
+  --chart-4:         #C9A84C;
+  --chart-5:         #450A0A;
+  --radius:          0.625rem;
+  --sidebar:         #080808;
+  --sidebar-foreground: #E8E4DC;
+  --sidebar-primary: #8B0000;
+  --sidebar-primary-foreground: #E8E4DC;
+  --sidebar-accent:  rgba(139, 0, 0, 0.2);
+  --sidebar-accent-foreground: #E8E4DC;
+  --sidebar-border:  rgba(139, 0, 0, 0.2);
+  --sidebar-ring:    rgba(220, 38, 38, 0.4);
+
+  /* Auth / system UI (FSD) */
+  --glow:              #00E5FF;
+  --cta:               #D90429;
+  --cta-foreground:    #ffffff;
+  --success:           #7c3aed;
+  --success-foreground: #e9d5ff;
+  --success-muted:     #a78bfa;
+  --success-surface:   #1a0a2e;
 }
 
+/* ============================================================
+   Tailwind v4 theme extension
+   ============================================================ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:   #050505;
+  --color-foreground:   #E8E4DC;
+  --color-void:         #050505;
+  --color-charcoal:     #0B0B0F;
+  --color-blood:        #8B0000;
+  --color-crimson:      #DC2626;
+  --color-deep-red:     #450A0A;
+  --color-bone:         #E8E4DC;
+  --color-gold-dim:     #C9A84C;
+  --color-muted:        #6B7280;
+
+  --font-sans:      var(--font-sans), "Geist", sans-serif;
+  --font-mono:      var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+  --font-heading:   var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  --color-glow:              var(--glow);
+  --color-cta:               var(--cta);
+  --color-cta-foreground:    var(--cta-foreground);
+  --color-success:           var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-muted:     var(--success-muted);
+  --color-success-surface:   var(--success-surface);
+  --color-sidebar-ring:      var(--sidebar-ring);
+  --color-sidebar-border:      var(--sidebar-border);
+  --color-sidebar-accent-foreground:      var(--sidebar-accent-foreground);
+  --color-sidebar-accent:      var(--sidebar-accent);
+  --color-sidebar-primary-foreground:      var(--sidebar-primary-foreground);
+  --color-sidebar-primary:      var(--sidebar-primary);
+  --color-sidebar-foreground:      var(--sidebar-foreground);
+  --color-sidebar:      var(--sidebar);
+  --color-chart-5:      var(--chart-5);
+  --color-chart-4:      var(--chart-4);
+  --color-chart-3:      var(--chart-3);
+  --color-chart-2:      var(--chart-2);
+  --color-chart-1:      var(--chart-1);
+  --color-ring:      var(--ring);
+  --color-input:      var(--input);
+  --color-border:      var(--border);
+  --color-destructive:      var(--destructive);
+  --color-accent-foreground:      var(--accent-foreground);
+  --color-accent:      var(--accent);
+  --color-muted-foreground:      var(--muted-foreground);
+  --color-secondary-foreground:      var(--secondary-foreground);
+  --color-secondary:      var(--secondary);
+  --color-primary-foreground:      var(--primary-foreground);
+  --color-primary:      var(--primary);
+  --color-popover-foreground:      var(--popover-foreground);
+  --color-popover:      var(--popover);
+  --color-card-foreground:      var(--card-foreground);
+  --color-card:      var(--card);
+  --radius-sm:      calc(var(--radius) * 0.6);
+  --radius-md:      calc(var(--radius) * 0.8);
+  --radius-lg:      var(--radius);
+  --radius-xl:      calc(var(--radius) * 1.4);
+  --radius-2xl:      calc(var(--radius) * 1.8);
+  --radius-3xl:      calc(var(--radius) * 2.2);
+  --radius-4xl:      calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ============================================================
+   Base Reset
+   ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--color-void);
+  color: var(--color-text);
+  font-family: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   KOGANE PANEL — core reusable utility
+   ============================================================ */
+.kogane-panel {
+  background: rgba(10, 10, 10, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(139, 0, 0, 0.2);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
+  position: relative;
+}
+
+/* Corner accent marks */
+.kogane-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 10px;
+  background: #DC2626;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.kogane-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 10px;
+  height: 2px;
+  background: #DC2626;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.kogane-panel:hover::before,
+.kogane-panel:hover::after {
+  opacity: 0.8;
+}
+
+/* ============================================================
+   Atmosphere Layer Animations
+   ============================================================ */
+
+/* --- Hex grid drift: slow 60s continuous translate --- */
+@keyframes hexDrift {
+  0%   { transform: translate(0px, 0px); }
+  25%  { transform: translate(10px, 15px); }
+  50%  { transform: translate(20px, 20px); }
+  75%  { transform: translate(10px, 5px); }
+  100% { transform: translate(0px, 0px); }
+}
+
+/* --- Grid layer opacity pulse (normal 8s) --- */
+@keyframes gridPulse {
+  0%, 100% { opacity: 0.07; }
+  50%       { opacity: 0.12; }
+}
+
+/* --- Grid layer opacity pulse (danger mode 4s, higher range) --- */
+@keyframes gridPulseDanger {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.26; }
+}
+
+/* --- Grid layer opacity pulse (century mode 4s) --- */
+@keyframes gridPulseCentury {
+  0%, 100% { opacity: 0.07; }
+  50%       { opacity: 0.12; }
+}
+
+/*
+  --- Scan wave: sweeps top→bottom over 2.5s, 
+      then stays invisible for the rest of the interval.
+
+  For a 10s interval:
+    0%      → start at top (translateY -4px)
+    25%     → reach bottom (translateY 100vh) within 2.5s
+    25.01%  → jump back above viewport (invisible)
+    100%    → stay invisible until next cycle
+
+  For a 3s interval (centuryMode), we use a separate keyframe
+  where the entire animation duration IS 3s (see component).
+*/
+@keyframes scanWave10s {
+  0%     { transform: translateY(-4px); opacity: 0; }
+  2%     { opacity: 1; }
+  22%    { opacity: 1; }
+  25%    { transform: translateY(100vh); opacity: 0; }
+  25.01% { transform: translateY(-4px); opacity: 0; }
+  100%   { transform: translateY(-4px); opacity: 0; }
+}
+
+@keyframes scanWave3s {
+  0%     { transform: translateY(-4px); opacity: 0; }
+  5%     { opacity: 1; }
+  78%    { opacity: 1; }
+  83%    { transform: translateY(100vh); opacity: 0; }
+  84%    { transform: translateY(-4px); opacity: 0; }
+  100%   { transform: translateY(-4px); opacity: 0; }
+}
+
+/* --- Fog corner pulses (different durations = async feel) --- */
+@keyframes fogPulse12 {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+@keyframes fogPulse15 {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+/* ============================================================
+   Typography helpers
+   ============================================================ */
+.font-heading {
+  font-family: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.font-mono-stats {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace;
+}
+
+/* ============================================================
+   Dashboard Keyframes
+   ============================================================ */
+
+/* Outer ring spin (8s normal, 4s century) */
+@keyframes outerRingSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Energy arc pulse */
+@keyframes energyPulse {
+  0%, 100% { stroke-opacity: 0.7; }
+  50%       { stroke-opacity: 1; }
+}
+
+/* Rapid low-energy flicker */
+@keyframes energyFlicker {
+  0%, 100% { stroke-opacity: 0.3; }
+  50%       { stroke-opacity: 0.9; }
+}
+
+/* Skull icon opacity pulse */
+@keyframes skullPulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 1; }
+}
+
+/* Blinking cursor (step-end for authentic terminal feel) */
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* Danger zone border breath */
+@keyframes dangerBreath {
+  0%, 100% { border-color: rgba(220,38,38,0.4); }
+  50%       { border-color: rgba(220,38,38,1); }
+}
+
+/* System message appear */
+@keyframes msgIn {
+  0%   { opacity: 0; transform: translateY(8px); }
+  70%  { opacity: 1; transform: translateY(0); }
+  75%  { transform: translateX(2px); }
+  80%  { transform: translateX(0); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* System message dismiss */
+@keyframes msgOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-4px); }
+}
+
+/* Colony counter easeOut (used via JS, but declared here for reference) */
+
+/* ============================================================
+   Binding vow — auth ritual (seal + loader + fingerprint scan)
+   ============================================================ */
+@keyframes binding-seal-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--glow) 18%, transparent),
+      0 0 18px color-mix(in srgb, var(--cta) 6%, transparent),
+      inset 0 0 0 1px color-mix(in srgb, var(--color-crimson) 12%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--glow) 50%, transparent),
+      0 0 36px color-mix(in srgb, var(--glow) 14%, transparent),
+      0 0 56px color-mix(in srgb, var(--cta) 16%, transparent),
+      inset 0 0 22px color-mix(in srgb, var(--color-crimson) 10%, transparent);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes jjk-logo-tumble {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  45% {
+    transform: rotate(198deg) scale(1.04);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes auth-fp-scanline {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+.auth-seal-active {
+  animation: binding-seal-glow 1.05s ease-in-out infinite;
+}
+
+.auth-jjk-loader {
+  animation: jjk-logo-tumble 2.35s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--glow) 50%, transparent))
+    drop-shadow(0 0 3px color-mix(in srgb, var(--cta) 45%, transparent));
+}
+
+.auth-jjk-orbit-reverse {
+  animation: jjk-logo-tumble 7s linear infinite reverse;
+}
+
+.auth-fp-scanline {
+  animation: auth-fp-scanline 2.4s linear infinite;
+}
+
+/* Auth page — perspective hex barrier floor */
+.auth-hex-perspective {
+  transform: perspective(520px) rotateX(62deg) scale(1.05);
+  transform-origin: center center;
+}
+
+.auth-binding-card {
+  border-color: color-mix(in srgb, var(--glow) 15%, transparent);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--color-blood) 15%, transparent);
+}
+
+.auth-kogane-halo {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-crimson) 30%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+.auth-kogane-glow {
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--color-crimson) 40%, transparent));
+}
+
+.auth-ritual-ring {
+  border-color: color-mix(in srgb, var(--glow) 20%, transparent);
+  box-shadow: 0 0 32px color-mix(in srgb, var(--cta) 15%, transparent);
+}
+
+/* Hex stroke matches --color-crimson (#DC2626) */
+.auth-hex-drift {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 0L56 16v32L28 64 0 48V16z' fill='none' stroke='rgba(220%2C38%2C38%2C0.28)' stroke-width='0.75'/%3E%3C/svg%3E");
+  background-size: 56px 100px;
+  animation:
+    hexDrift 60s ease-in-out infinite,
+    gridPulse 8s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-crimson) 15%, transparent));
+}
+
+.auth-hex-glow {
+  background: radial-gradient(
+    ellipse 95% 60% at 50% 95%,
+    color-mix(in srgb, var(--color-crimson) 40%, transparent) 0%,
+    color-mix(in srgb, var(--color-blood) 12%, transparent) 40%,
+    transparent 68%
+  );
+}
+
+/* ============================================================
+   Scrollbar styling
+   ============================================================ */
+::-webkit-scrollbar            { width: 4px; }
+::-webkit-scrollbar-track      { background: var(--color-void); }
+::-webkit-scrollbar-thumb      { background: var(--color-blood); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-crimson); }
+
+.dark {
+  --background:      oklch(0.145 0 0);
+  --foreground:      oklch(0.985 0 0);
+  --card:      oklch(0.205 0 0);
+  --card-foreground:      oklch(0.985 0 0);
+  --popover:      oklch(0.205 0 0);
+  --popover-foreground:      oklch(0.985 0 0);
+  --primary:      oklch(0.922 0 0);
+  --primary-foreground:      oklch(0.205 0 0);
+  --secondary:      oklch(0.269 0 0);
+  --secondary-foreground:      oklch(0.985 0 0);
+  --muted:      oklch(0.269 0 0);
+  --muted-foreground:      oklch(0.708 0 0);
+  --accent:      oklch(0.269 0 0);
+  --accent-foreground:      oklch(0.985 0 0);
+  --destructive:      oklch(0.704 0.191 22.216);
+  --border:      oklch(1 0 0 / 10%);
+  --input:      oklch(1 0 0 / 15%);
+  --ring:      oklch(0.556 0 0);
+  --chart-1:      oklch(0.87 0 0);
+  --chart-2:      oklch(0.556 0 0);
+  --chart-3:      oklch(0.439 0 0);
+  --chart-4:      oklch(0.371 0 0);
+  --chart-5:      oklch(0.269 0 0);
+  --sidebar:      oklch(0.205 0 0);
+  --sidebar-foreground:      oklch(0.985 0 0);
+  --sidebar-primary:      oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground:      oklch(0.985 0 0);
+  --sidebar-accent:      oklch(0.269 0 0);
+  --sidebar-accent-foreground:      oklch(0.985 0 0);
+  --sidebar-border:      oklch(1 0 0 / 10%);
+  --sidebar-ring:      oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    background-color: #050505;
+    color-scheme: dark;
+  }
+  body {
+    @apply min-h-svh bg-background text-foreground antialiased;
+  }
 }
