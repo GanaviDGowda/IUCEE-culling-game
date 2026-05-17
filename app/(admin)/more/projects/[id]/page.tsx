@@ -251,9 +251,9 @@ export default function AdminProjectDetail() {
             
             <div className="space-y-3.5 pt-1">
               <div className="space-y-1.5">
-                <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading">Owner</p>
+                <p className="text-[8px] font-black uppercase text-zinc-555 tracking-wider font-heading">Owner</p>
                 <div className="flex items-center gap-2">
-                  <Avatar className="w-7 h-7 border border-zinc-850">
+                  <Avatar className="w-7 h-7 border border-zinc-855">
                     <AvatarFallback className="bg-zinc-850 text-xs font-bold text-zinc-400">
                       {project.owner?.name?.slice(0,2).toUpperCase()}
                     </AvatarFallback>
@@ -269,17 +269,17 @@ export default function AdminProjectDetail() {
 
               {project.team.length > 0 && (
                 <div className="space-y-1.5 pt-2 border-t border-zinc-900">
-                  <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading">Collaborators</p>
+                  <p className="text-[8px] font-black uppercase text-zinc-555 tracking-wider font-heading">Collaborators</p>
                   <div className="space-y-2">
                     {project.team.map((member: any) => (
                       <div key={member.id} className="flex items-center gap-2">
                         <Avatar className="w-6 h-6 border border-zinc-850">
-                          <AvatarFallback className="bg-zinc-900 text-[10px] font-bold text-zinc-555">
+                          <AvatarFallback className="bg-zinc-900 text-[10px] font-bold text-zinc-550">
                             {member.name?.slice(0,2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-[11px] font-bold text-zinc-355 leading-none">{member.name}</p>
+                          <p className="text-[11px] font-bold text-zinc-350 leading-none">{member.name}</p>
                           <p className="text-[8px] text-zinc-650 font-mono font-black uppercase mt-0.5">
                             {member.branch} Y{member.year}
                           </p>

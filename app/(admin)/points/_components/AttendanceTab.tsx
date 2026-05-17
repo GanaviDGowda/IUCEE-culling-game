@@ -399,7 +399,7 @@ export function AttendanceTab() {
       </div>
 
       {/* Collapsible CIE Year-wise Attendance Bonus Hub - Redesigned with futuristic console visuals */}
-      <div className="bg-zinc-955/30 border border-red-500/10 rounded-2xl overflow-hidden transition-all shadow-xl shadow-black/30">
+      <div className="bg-zinc-950/30 border border-red-500/10 rounded-2xl overflow-hidden transition-all shadow-xl shadow-black/30">
         <button
           onClick={() => setShowCieHub(!showCieHub)}
           className="w-full flex items-center justify-between p-3.5 hover:bg-red-500/[0.02] transition-colors text-left"

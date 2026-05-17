@@ -281,7 +281,7 @@ export default function AdminProjectsDashboard() {
 
             <div className="space-y-3">
               {weekly_updates.pending.length === 0 ? (
-                <div className="p-4 bg-zinc-950/20 border border-zinc-850 border-dashed rounded-2xl text-center text-[10px] text-zinc-550 font-mono uppercase tracking-wider py-8">
+                <div className="p-4 bg-zinc-950/20 border border-zinc-850 border-dashed rounded-2xl text-center text-[10px] text-zinc-550 font-heading uppercase tracking-wider py-8">
                   All weekly updates reviewed. No pending tasks.
                 </div>
               ) : (
@@ -350,7 +350,7 @@ export default function AdminProjectsDashboard() {
                     >
                       <div className="space-y-0.5">
                         <p className="text-[11px] font-bold text-zinc-300 truncate max-w-[120px]">{proj.name}</p>
-                        <p className="text-[8px] font-black uppercase text-zinc-550 font-mono truncate">{proj.owner?.name}</p>
+                        <p className="text-[8px] font-black uppercase text-zinc-550 font-heading truncate">{proj.owner?.name}</p>
                       </div>
                       <RiExternalLinkLine className="w-3 h-3 text-zinc-600" />
                     </div>

@@ -94,7 +94,7 @@ export function CalendarTab() {
       <div className="space-y-4 lg:col-span-7">
         {/* Calendar header controller */}
         <div className="flex justify-between items-center bg-zinc-900/10 border border-zinc-850 p-2.5 rounded-xl">
-          <h3 className="text-[11px] font-black text-white uppercase tracking-widest font-mono">
+          <h3 className="text-[11px] font-black text-white uppercase tracking-widest font-heading">
             {monthNames[month]} {year}
           </h3>
           <div className="flex items-center gap-1">
@@ -118,7 +118,7 @@ export function CalendarTab() {
         ) : (
           <div className="bg-zinc-900/10 border border-zinc-850 p-3.5 rounded-2xl">
             {/* Day Names Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-2.5 border-b border-zinc-900 font-mono">
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-zinc-400 uppercase tracking-widest pb-2.5 border-b border-zinc-900 font-heading">
               <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
             </div>
 

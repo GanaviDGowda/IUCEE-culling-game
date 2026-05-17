@@ -131,7 +131,7 @@ export default function AdminLeaderboardsDashboard() {
           Track high-tier student rankings, domain mastery scoring, and overall member distribution metrics.
         </p>
       </div>
- 
+
       {/* Main TopTabs */}
       <div className="flex border-b border-zinc-900 gap-1.5 pb-2">
         <button
@@ -339,7 +339,7 @@ export default function AdminLeaderboardsDashboard() {
                   { key: "active", label: "Active Status", color: "bg-zinc-500" },
                 ].map((tier) => (
                   <div key={tier.key} className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-mono">
+                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-heading">
                       {tier.label}
                     </span>
                     {renderProgressBar(
@@ -383,7 +383,7 @@ export default function AdminLeaderboardsDashboard() {
                 ) : (
                   Object.entries(distribution.branches || {}).map(([branch, count]: any) => (
                     <div key={branch} className="space-y-1">
-                      <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-mono">
+                      <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-heading">
                         {branch} Department
                       </span>
                       {renderProgressBar(count, distribution.total_students || 1, "bg-teal-500")}
@@ -403,7 +403,7 @@ export default function AdminLeaderboardsDashboard() {
               <div className="space-y-3.5 pt-1">
                 {[1, 2, 3, 4].map((year) => (
                   <div key={year} className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-mono">
+                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-heading">
                       {year}st Year Students
                     </span>
                     {renderProgressBar(

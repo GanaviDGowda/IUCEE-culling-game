@@ -126,7 +126,7 @@ export default function AdminHomePage() {
                 Pending Actions Today
               </h3>
               {totalPendingActions > 0 && (
-                <Badge className="bg-red-950/20 text-red-400 border border-red-900/30 text-[8px] font-black uppercase tracking-widest font-heading">
+                <Badge className="bg-red-955 text-red-400 border border-red-900/30 text-[8px] font-black uppercase tracking-widest font-heading">
                   {totalPendingActions} Require Action
                 </Badge>
               )}
@@ -137,7 +137,7 @@ export default function AdminHomePage() {
                 <div className="text-center py-6 space-y-2 flex flex-col items-center justify-center">
                   <RiFileList3Line className="w-7 h-7 text-zinc-650" />
                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-heading">All Tasks Completed</p>
-                  <p className="text-[9px] text-zinc-550 max-w-[200px]">You are all caught up for today! No new approvals or tasks mapped.</p>
+                  <p className="text-[9px] text-zinc-555 max-w-[200px]">You are all caught up for today! No new approvals or tasks mapped.</p>
                 </div>
               ) : (
                 <div className="space-y-3">

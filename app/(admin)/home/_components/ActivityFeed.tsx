@@ -87,7 +87,7 @@ export function ActivityFeed({ activities, isRefreshing, onManualRefresh }: Acti
                       <h4 className="text-xs font-black text-white leading-none">
                         {item.title}
                       </h4>
-                      <span className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading shrink-0">
+                      <span className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-mono shrink-0">
                         {formatRelativeTime(item.timestamp)}
                       </span>
                     </div>
