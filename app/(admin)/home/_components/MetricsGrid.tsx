@@ -59,7 +59,7 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
             className="p-4 bg-zinc-900/10 border border-zinc-850 rounded-2xl flex flex-col justify-between space-y-3 hover:border-zinc-800 transition-all duration-300 group"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-450 font-mono">
+              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-450 font-heading">
                 {card.title}
               </span>
               <div className={`p-1.5 rounded-lg border ${card.color.split(" ")[1]} ${card.color.split(" ")[2]}`}>

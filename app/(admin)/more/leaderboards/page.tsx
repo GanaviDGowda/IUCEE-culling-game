@@ -123,20 +123,20 @@ export default function AdminLeaderboardsDashboard() {
       
       {/* Page Title */}
       <div>
-        <h2 className="text-sm font-black text-white uppercase tracking-widest font-mono flex items-center gap-1.5">
+        <h2 className="text-sm font-black text-white uppercase tracking-widest font-heading flex items-center gap-1.5">
           <RiTrophyLine className="w-5 h-5 text-red-500" />
           Colony Leaderboards
         </h2>
-        <p className="text-[10px] text-zinc-500 mt-0.5 font-medium uppercase tracking-wider font-mono">
+        <p className="text-[10px] text-zinc-500 mt-0.5 font-medium uppercase tracking-wider font-heading">
           Track high-tier student rankings, domain mastery scoring, and overall member distribution metrics.
         </p>
       </div>
-
+ 
       {/* Main TopTabs */}
       <div className="flex border-b border-zinc-900 gap-1.5 pb-2">
         <button
           onClick={() => setActiveTab("main")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
             activeTab === "main" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -146,7 +146,7 @@ export default function AdminLeaderboardsDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("domain")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
             activeTab === "domain" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -156,7 +156,7 @@ export default function AdminLeaderboardsDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("distribution")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
             activeTab === "distribution" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -178,7 +178,7 @@ export default function AdminLeaderboardsDashboard() {
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`flex-1 py-1 rounded-lg text-[9px] font-mono font-black uppercase tracking-wider transition-colors ${
+                className={`flex-1 py-1 rounded-lg text-[9px] font-heading font-black uppercase tracking-wider transition-colors ${
                   period === p 
                     ? "bg-red-955 border border-red-900/30 text-red-400" 
                     : "text-zinc-500 hover:text-zinc-300"
@@ -263,7 +263,7 @@ export default function AdminLeaderboardsDashboard() {
                   }`}
                 >
                   <Icon className="w-5 h-5 mb-1 group-hover:scale-105" />
-                  <span className="text-[9px] font-black font-mono uppercase tracking-wider">{sub.label}</span>
+                  <span className="text-[9px] font-black font-heading uppercase tracking-wider">{sub.label}</span>
                 </button>
               );
             })}
@@ -325,7 +325,7 @@ export default function AdminLeaderboardsDashboard() {
             
             {/* Tiers Distribution Bar Chart */}
             <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-4">
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono flex items-center gap-1 border-b border-zinc-900 pb-2">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1 border-b border-zinc-900 pb-2">
                 <RiPieChartLine className="w-4 h-4" />
                 Tier Distribution
               </h3>
@@ -358,7 +358,7 @@ export default function AdminLeaderboardsDashboard() {
                 <RiUserStarLine className="w-5 h-5 animate-pulse" />
               </div>
               <div>
-                <h4 className="text-xs font-black text-white uppercase tracking-wider font-mono">Century Tier Members</h4>
+                <h4 className="text-xs font-black text-white uppercase tracking-wider font-heading">Century Tier Members</h4>
                 <p className="text-[10px] text-zinc-400 mt-0.5 leading-normal">
                   There are currently <strong className="text-red-400">{distribution.century_users} students</strong> who have earned 100+ lifetime points, ascending to the legendary Century tier list!
                 </p>
@@ -372,7 +372,7 @@ export default function AdminLeaderboardsDashboard() {
             
             {/* Branch Split */}
             <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-4">
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono flex items-center gap-1 border-b border-zinc-900 pb-2">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1 border-b border-zinc-900 pb-2">
                 <RiGroupLine className="w-4 h-4" />
                 Branch Demographic Split
               </h3>
@@ -395,7 +395,7 @@ export default function AdminLeaderboardsDashboard() {
 
             {/* Year Split */}
             <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-4">
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono flex items-center gap-1 border-b border-zinc-900 pb-2">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1 border-b border-zinc-900 pb-2">
                 <RiGroupLine className="w-4 h-4" />
                 Academic Year split
               </h3>

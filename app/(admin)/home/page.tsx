@@ -95,16 +95,16 @@ export default function AdminHomePage() {
       {/* Dynamic Header */}
       <div className="flex justify-between items-center bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl">
         <div>
-          <h2 className="text-sm font-black text-white uppercase tracking-widest font-mono flex items-center gap-1.5">
+          <h2 className="text-sm font-black text-white uppercase tracking-widest font-heading flex items-center gap-1.5">
             <RiShieldUserLine className="w-5 h-5 text-red-500" />
             Tactical Control Center
           </h2>
-          <p className="text-[10px] text-zinc-500 mt-0.5 font-medium uppercase tracking-wider font-mono">
+          <p className="text-[10px] text-zinc-500 mt-0.5 font-medium uppercase tracking-wider font-heading">
             System status: fully operational • 30s auto-sync enabled
           </p>
         </div>
         {refreshing && (
-          <span className="text-[9px] font-black text-red-400 uppercase tracking-widest font-mono animate-pulse">
+          <span className="text-[9px] font-black text-red-400 uppercase tracking-widest font-heading animate-pulse">
             Syncing...
           </span>
         )}
@@ -122,11 +122,11 @@ export default function AdminHomePage() {
           {/* Pending Actions List */}
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading">
                 Pending Actions Today
               </h3>
               {totalPendingActions > 0 && (
-                <Badge className="bg-red-950/20 text-red-400 border border-red-900/30 text-[8px] font-black uppercase tracking-widest font-mono">
+                <Badge className="bg-red-950/20 text-red-400 border border-red-900/30 text-[8px] font-black uppercase tracking-widest font-heading">
                   {totalPendingActions} Require Action
                 </Badge>
               )}
@@ -136,7 +136,7 @@ export default function AdminHomePage() {
               {!hasPendingRegistrations && pending_actions.pending_appeals_count === 0 ? (
                 <div className="text-center py-6 space-y-2 flex flex-col items-center justify-center">
                   <RiFileList3Line className="w-7 h-7 text-zinc-650" />
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-mono">All Tasks Completed</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-heading">All Tasks Completed</p>
                   <p className="text-[9px] text-zinc-550 max-w-[200px]">You are all caught up for today! No new approvals or tasks mapped.</p>
                 </div>
               ) : (

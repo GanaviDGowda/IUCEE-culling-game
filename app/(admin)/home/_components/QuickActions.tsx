@@ -46,7 +46,7 @@ export function QuickActions() {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono">
+      <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading">
         Quick Operations
       </h3>
 

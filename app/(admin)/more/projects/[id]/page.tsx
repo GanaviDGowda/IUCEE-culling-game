@@ -109,7 +109,7 @@ export default function AdminProjectDetail() {
       {/* Back button link */}
       <button 
         onClick={() => router.push("/projects")} 
-        className="flex items-center gap-1 text-[10px] font-black text-zinc-550 hover:text-white uppercase tracking-wider font-mono transition-colors"
+        className="flex items-center gap-1 text-[10px] font-black text-zinc-550 hover:text-white uppercase tracking-wider font-heading transition-colors"
       >
         <RiArrowLeftSLine className="w-4 h-4" />
         Back to Registry
@@ -151,13 +151,13 @@ export default function AdminProjectDetail() {
         
         {/* Left Column: Form Editor */}
         <form onSubmit={handleSaveChanges} className="lg:col-span-8 space-y-4 bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl">
-          <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono border-b border-zinc-900 pb-2.5">
+          <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
             Update Parameters
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-mono">Project Name</label>
+              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Project Name</label>
               <input 
                 type="text" 
                 value={name} 
@@ -168,7 +168,7 @@ export default function AdminProjectDetail() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-mono">GitHub URL</label>
+              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">GitHub URL</label>
               <input 
                 type="url" 
                 value={githubUrl} 
@@ -179,7 +179,7 @@ export default function AdminProjectDetail() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-mono">Live / Demo Link</label>
+              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Live / Demo Link</label>
               <input 
                 type="url" 
                 value={externalUrl} 
@@ -198,7 +198,7 @@ export default function AdminProjectDetail() {
                   onChange={(e) => setActive(e.target.checked)} 
                   className="rounded border-zinc-800 bg-black text-red-500 focus:ring-0 focus:ring-offset-0"
                 />
-                <label htmlFor="active" className="text-[10px] font-black text-zinc-400 uppercase tracking-wider font-mono cursor-pointer">
+                <label htmlFor="active" className="text-[10px] font-black text-zinc-400 uppercase tracking-wider font-heading cursor-pointer">
                   Active Status
                 </label>
               </div>
@@ -211,14 +211,14 @@ export default function AdminProjectDetail() {
                   onChange={(e) => setFunded(e.target.checked)} 
                   className="rounded border-zinc-800 bg-black text-red-500 focus:ring-0 focus:ring-offset-0"
                 />
-                <label htmlFor="funded" className="text-[10px] font-black text-zinc-400 uppercase tracking-wider font-mono cursor-pointer">
+                <label htmlFor="funded" className="text-[10px] font-black text-zinc-400 uppercase tracking-wider font-heading cursor-pointer">
                   Funded Claim
                 </label>
               </div>
             </div>
 
             <div className="space-y-1 md:col-span-2">
-              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-mono">Description</label>
+              <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Description</label>
               <textarea 
                 value={description} 
                 onChange={(e) => setDescription(e.target.value)} 
@@ -244,14 +244,14 @@ export default function AdminProjectDetail() {
           
           {/* Team Panel */}
           <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-3">
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono flex items-center gap-1">
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1">
               <RiGroupLine className="w-4 h-4" />
               Project Roster
             </h3>
             
             <div className="space-y-3.5 pt-1">
               <div className="space-y-1.5">
-                <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-mono">Owner</p>
+                <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading">Owner</p>
                 <div className="flex items-center gap-2">
                   <Avatar className="w-7 h-7 border border-zinc-850">
                     <AvatarFallback className="bg-zinc-850 text-xs font-bold text-zinc-400">
@@ -269,17 +269,17 @@ export default function AdminProjectDetail() {
 
               {project.team.length > 0 && (
                 <div className="space-y-1.5 pt-2 border-t border-zinc-900">
-                  <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-mono">Collaborators</p>
+                  <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading">Collaborators</p>
                   <div className="space-y-2">
                     {project.team.map((member: any) => (
                       <div key={member.id} className="flex items-center gap-2">
                         <Avatar className="w-6 h-6 border border-zinc-850">
-                          <AvatarFallback className="bg-zinc-900 text-[10px] font-bold text-zinc-550">
+                          <AvatarFallback className="bg-zinc-900 text-[10px] font-bold text-zinc-555">
                             {member.name?.slice(0,2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-[11px] font-bold text-zinc-350 leading-none">{member.name}</p>
+                          <p className="text-[11px] font-bold text-zinc-355 leading-none">{member.name}</p>
                           <p className="text-[8px] text-zinc-650 font-mono font-black uppercase mt-0.5">
                             {member.branch} Y{member.year}
                           </p>
@@ -294,7 +294,7 @@ export default function AdminProjectDetail() {
 
           {/* Weekly Updates History */}
           <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-3">
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono flex items-center gap-1">
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1">
               <RiFileList3Line className="w-4 h-4" />
               Updates Timeline
             </h3>

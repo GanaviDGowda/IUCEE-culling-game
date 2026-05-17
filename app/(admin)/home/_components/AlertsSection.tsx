@@ -49,7 +49,7 @@ export function AlertsSection({ alerts }: AlertsSectionProps) {
           <RiCheckboxCircleLine className="w-5 h-5" />
         </div>
         <div>
-          <h4 className="text-xs font-black text-white uppercase tracking-wider font-mono">Colony Secured</h4>
+          <h4 className="text-xs font-black text-white uppercase tracking-wider font-heading">Colony Secured</h4>
           <p className="text-[10px] text-zinc-500 mt-0.5 font-medium">All active members are stable. No warnings or pending appeals reported.</p>
         </div>
       </div>
@@ -60,7 +60,7 @@ export function AlertsSection({ alerts }: AlertsSectionProps) {
     <div className="space-y-3">
       <div className="flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-        <h3 className="text-[10px] font-black text-red-400 uppercase tracking-widest font-mono">
+        <h3 className="text-[10px] font-black text-red-400 uppercase tracking-widest font-heading">
           System Alerts
         </h3>
       </div>

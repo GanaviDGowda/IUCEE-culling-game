@@ -41,13 +41,13 @@ export function ActivityFeed({ activities, isRefreshing, onManualRefresh }: Acti
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
-        <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono">
+        <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading">
           Live Activity Feed
         </h3>
         <button 
           onClick={onManualRefresh}
           disabled={isRefreshing}
-          className="flex items-center gap-1 text-[9px] font-black text-zinc-550 hover:text-white uppercase tracking-wider font-mono transition-colors"
+          className="flex items-center gap-1 text-[9px] font-black text-zinc-550 hover:text-white uppercase tracking-wider font-heading transition-colors"
         >
           <RiRefreshLine className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-red-500" : ""}`} />
           Sync
@@ -87,7 +87,7 @@ export function ActivityFeed({ activities, isRefreshing, onManualRefresh }: Acti
                       <h4 className="text-xs font-black text-white leading-none">
                         {item.title}
                       </h4>
-                      <span className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-mono shrink-0">
+                      <span className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading shrink-0">
                         {formatRelativeTime(item.timestamp)}
                       </span>
                     </div>

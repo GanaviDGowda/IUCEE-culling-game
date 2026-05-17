@@ -118,11 +118,11 @@ export default function AdminProjectsDashboard() {
       
       {/* Page Header */}
       <div>
-        <h2 className="text-sm font-black text-white uppercase tracking-widest font-mono flex items-center gap-1.5">
+        <h2 className="text-sm font-black text-white uppercase tracking-widest font-heading flex items-center gap-1.5">
           <RiFolderShield2Line className="w-5 h-5 text-red-500" />
           Tactical Projects Registry
         </h2>
-        <p className="text-[10px] text-zinc-500 mt-0.5 font-medium uppercase tracking-wider font-mono">
+        <p className="text-[10px] text-zinc-500 mt-0.5 font-medium uppercase tracking-wider font-heading">
           Manage member project updates, allocate weekly progress points, and audit funding claims.
         </p>
       </div>
@@ -131,7 +131,7 @@ export default function AdminProjectsDashboard() {
       <div className="flex border-b border-zinc-900 gap-1.5 pb-2">
         <button
           onClick={() => setActiveTab("active")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
             activeTab === "active" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -141,7 +141,7 @@ export default function AdminProjectsDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("updates")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
             activeTab === "updates" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -151,7 +151,7 @@ export default function AdminProjectsDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("funding")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
             activeTab === "funding" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -275,7 +275,7 @@ export default function AdminProjectsDashboard() {
           
           {/* Submitted Section */}
           <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono">
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading">
               Pending Submissions ({weekly_updates.pending.length})
             </h3>
 
@@ -333,7 +333,7 @@ export default function AdminProjectsDashboard() {
 
           {/* Missing Updates Section */}
           <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-amber-400 uppercase tracking-widest font-mono flex items-center gap-1">
+            <h3 className="text-[10px] font-black text-amber-400 uppercase tracking-widest font-heading flex items-center gap-1">
               <RiAlertLine className="w-4 h-4" />
               Missing Weekly updates ({weekly_updates.missing.length})
             </h3>
@@ -362,7 +362,7 @@ export default function AdminProjectsDashboard() {
 
           {/* Dormant Section */}
           <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-red-400 uppercase tracking-widest font-mono flex items-center gap-1">
+            <h3 className="text-[10px] font-black text-red-400 uppercase tracking-widest font-heading flex items-center gap-1">
               <RiAlertLine className="w-4 h-4" />
               Dormant projects (&gt;14 days inactive) ({weekly_updates.dormant.length})
             </h3>
@@ -400,7 +400,7 @@ export default function AdminProjectsDashboard() {
           
           {/* Claims Cards */}
           <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono">
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading">
               Pending Funding Claims ({funding_claims.claims.length})
             </h3>
 
@@ -460,7 +460,7 @@ export default function AdminProjectsDashboard() {
 
           {/* Awarded / Claimed Projects */}
           <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono">
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading">
               Awarded & Funded Projects ({funding_claims.awarded.length})
             </h3>
 
