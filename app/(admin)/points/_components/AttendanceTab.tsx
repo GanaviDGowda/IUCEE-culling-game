@@ -399,7 +399,7 @@ export function AttendanceTab() {
       </div>
 
       {/* Collapsible CIE Year-wise Attendance Bonus Hub - Redesigned with futuristic console visuals */}
-      <div className="bg-zinc-950/30 border border-red-500/10 rounded-2xl overflow-hidden transition-all shadow-xl shadow-black/30">
+      <div className="bg-zinc-955/30 border border-red-500/10 rounded-2xl overflow-hidden transition-all shadow-xl shadow-black/30">
         <button
           onClick={() => setShowCieHub(!showCieHub)}
           className="w-full flex items-center justify-between p-3.5 hover:bg-red-500/[0.02] transition-colors text-left"
@@ -409,11 +409,11 @@ export function AttendanceTab() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </div>
-            <h3 className="text-[11px] font-black text-white uppercase tracking-widest font-mono">
+            <h3 className="text-[11px] font-black text-white uppercase tracking-widest font-heading">
               [CIE SKIP ENGINE DECK]
             </h3>
           </div>
-          <span className="text-[9px] font-black text-zinc-455 uppercase tracking-widest font-mono flex items-center gap-1.5 bg-zinc-900/60 border border-zinc-800/80 px-2.5 py-1 rounded-lg">
+          <span className="text-[9px] font-black text-zinc-455 uppercase tracking-widest font-heading flex items-center gap-1.5 bg-zinc-900/60 border border-zinc-800/80 px-2.5 py-1 rounded-lg">
             <span>{showCieHub ? "COLLAPSE" : "EXPAND CONSOLE"}</span>
             <span className={`transform transition-transform text-[8px] ${showCieHub ? "rotate-180" : ""}`}>▼</span>
           </span>
@@ -438,7 +438,7 @@ export function AttendanceTab() {
                   {/* Year spec & status LEDs */}
                   <div className="w-full space-y-1">
                     <div className="flex justify-between items-center w-full">
-                      <h4 className="text-[10px] font-black font-mono tracking-widest text-zinc-400">
+                      <h4 className="text-[10px] font-black font-heading tracking-widest text-zinc-400">
                         YEAR 0{year}
                       </h4>
                       <div className="flex items-center gap-1">
