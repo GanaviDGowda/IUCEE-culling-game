@@ -1,118 +1,204 @@
-import { createClient } from "@/lib/supabase/server";
-import { SignOutButton } from "@/components/admin/SignOutButton";
-import { RiDashboardLine, RiCpuLine, RiGroupLine, RiFolderShield2Line, RiCalendarEventLine, RiAlertLine } from "@remixicon/react";
+"use client";
 
-export default async function RoleAwareHomePage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: profile } = user
-    ? await supabase
-        .from("users")
-        .select("role")
-        .eq("auth_id", user.id)
-        .maybeSingle()
-    : { data: null };
-  const role = profile?.role;
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MetricsGrid } from "./_components/MetricsGrid";
+import { AlertsSection } from "./_components/AlertsSection";
+import { QuickActions } from "./_components/QuickActions";
+import { ActivityFeed } from "./_components/ActivityFeed";
+import { 
+  RiShieldUserLine, 
+  RiArrowRightSLine, 
+  RiExternalLinkLine,
+  RiFileList3Line
+} from "@remixicon/react";
 
-  if (role === "admin") {
-    // Perform exact head-counts on Postgres tables to derive 100% live database metrics
-    const [
-      { count: playerTotal },
-      { count: dangerTotal },
-      { count: projectTotal },
-      { count: meetingTotal },
-      { count: pendingRegistrations }
-    ] = await Promise.all([
-      supabase.from("users").select("*", { count: "exact", head: true }),
-      supabase.from("users").select("*", { count: "exact", head: true }).eq("status", "danger_zone"),
-      supabase.from("projects").select("*", { count: "exact", head: true }),
-      supabase.from("meetings").select("*", { count: "exact", head: true }),
-      supabase.from("registration_requests").select("*", { count: "exact", head: true }).eq("status", "pending")
-    ]);
+export default function AdminHomePage() {
+  const router = useRouter();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
+  const fetchHomeData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setRefreshing(true);
+    try {
+      const res = await fetch("/api/admin/home");
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard statistics:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHomeData();
+
+    // Configure 30-second live background polling intervals
+    const interval = setInterval(() => {
+      fetchHomeData(true);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [fetchHomeData]);
+
+  if (loading) {
     return (
-      <div className="p-4 md:p-6 space-y-6">
-        {/* Dynamic Live Metric Widgets */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-zinc-900/35 border border-zinc-850 p-4 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between text-zinc-500">
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Total Players</span>
-              <RiGroupLine className="w-4 h-4 text-red-500" />
-            </div>
-            <p className="text-2xl font-black text-white">{playerTotal ?? 0}</p>
-            <p className="text-[9px] text-zinc-500 font-bold">Registered profiles</p>
+      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+        <div className="flex justify-between items-center">
+          <div className="space-y-1">
+            <Skeleton className="h-6 w-48 bg-zinc-900/40" />
+            <Skeleton className="h-4 w-64 bg-zinc-900/40" />
           </div>
-
-          <div className="bg-zinc-900/35 border border-zinc-850 p-4 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between text-zinc-500">
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Danger Zone</span>
-              <RiAlertLine className="w-4 h-4 text-amber-500" />
-            </div>
-            <p className="text-2xl font-black text-white">{dangerTotal ?? 0}</p>
-            <p className="text-[9px] text-zinc-550 font-bold">Require intervention</p>
-          </div>
-
-          <div className="bg-zinc-900/35 border border-zinc-850 p-4 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between text-zinc-500">
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Claimed Projects</span>
-              <RiFolderShield2Line className="w-4 h-4 text-blue-500" />
-            </div>
-            <p className="text-2xl font-black text-white">{projectTotal ?? 0}</p>
-            <p className="text-[9px] text-zinc-500">Registered portfolio items</p>
-          </div>
-
-          <div className="bg-zinc-900/35 border border-zinc-850 p-4 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between text-zinc-500">
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Meetings</span>
-              <RiCalendarEventLine className="w-4 h-4 text-purple-500" />
-            </div>
-            <p className="text-2xl font-black text-white">{meetingTotal ?? 0}</p>
-            <p className="text-[9px] text-zinc-500">Total sessions tracked</p>
-          </div>
+          <Skeleton className="h-8 w-20 bg-zinc-900/40 rounded-lg" />
         </div>
 
-        {(pendingRegistrations ?? 0) > 0 && (
-          <div className="bg-red-950/20 border border-red-900/40 p-4 rounded-2xl space-y-2">
-            <h3 className="text-xs font-black uppercase text-red-300 tracking-wider">
-              Pending Registrations
-            </h3>
-            <p className="text-zinc-300 text-sm">
-              {pendingRegistrations} student request{pendingRegistrations === 1 ? "" : "s"} waiting for approval in Members.
-            </p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <Skeleton className="h-24 w-full bg-zinc-900/40 rounded-2xl" />
+              <Skeleton className="h-24 w-full bg-zinc-900/40 rounded-2xl" />
+              <Skeleton className="h-24 w-full bg-zinc-900/40 rounded-2xl" />
+              <Skeleton className="h-24 w-full bg-zinc-900/40 rounded-2xl" />
+            </div>
+            <Skeleton className="h-44 w-full bg-zinc-900/40 rounded-2xl" />
           </div>
-        )}
-
-        <div className="bg-zinc-900/25 border border-zinc-850 p-6 rounded-2xl space-y-2.5">
-          <h3 className="text-xs font-black uppercase text-zinc-400 tracking-wider flex items-center gap-2">
-            <RiDashboardLine className="w-4 h-4 text-red-500" />
-            System Status
-          </h3>
-          <p className="text-zinc-400 text-xs leading-relaxed">
-            Welcome to the Kogane administration dashboard. The system has active real-time queries enabled. Navigate using the sidebar/bottom-bar to manage directories, allocate points, or audit colony safety parameters. All system counts are fetched dynamically from active databases.
-          </p>
+          <div className="lg:col-span-5 space-y-6">
+            <Skeleton className="h-32 w-full bg-zinc-900/40 rounded-2xl" />
+            <Skeleton className="h-60 w-full bg-zinc-900/40 rounded-2xl" />
+          </div>
         </div>
       </div>
     );
   }
 
-  // Render high-fidelity student portal placeholder
+  const { metrics, alerts, pending_actions, activity_feed } = data || {
+    metrics: { active_members: 0, danger_zone: 0, attendance_rate: 0, open_appeals: 0, current_quarter: "Q1" },
+    alerts: { at_risk_members: [], pending_appeals: [] },
+    pending_actions: { pending_registrations: [], pending_appeals_count: 0 },
+    activity_feed: []
+  };
+
+  const hasPendingRegistrations = pending_actions.pending_registrations.length > 0;
+  const totalPendingActions = pending_actions.pending_registrations.length + pending_actions.pending_appeals_count;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6 relative overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-900/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
       
-      <div className="max-w-md w-full space-y-8 text-center bg-zinc-900/30 p-8 rounded-3xl border border-zinc-800/50 backdrop-blur-md">
-        <div className="space-y-4">
-          <h1 className="text-3xl font-bold tracking-tight">Kogane Platform</h1>
-          <p className="text-zinc-400">
-            The student portal is currently under construction. Please check back later.
+      {/* Dynamic Header */}
+      <div className="flex justify-between items-center bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl">
+        <div>
+          <h2 className="text-sm font-black text-white uppercase tracking-widest font-mono flex items-center gap-1.5">
+            <RiShieldUserLine className="w-5 h-5 text-red-500" />
+            Tactical Control Center
+          </h2>
+          <p className="text-[10px] text-zinc-500 mt-0.5 font-medium uppercase tracking-wider font-mono">
+            System status: fully operational • 30s auto-sync enabled
           </p>
         </div>
-        
-        <div className="pt-4 border-t border-zinc-800/50">
-          <SignOutButton />
-        </div>
+        {refreshing && (
+          <span className="text-[9px] font-black text-red-400 uppercase tracking-widest font-mono animate-pulse">
+            Syncing...
+          </span>
+        )}
       </div>
+
+      {/* Main Dual Column Dashboard Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* Left Column: Metrics + Quick Actions + Pending Actions */}
+        <div className="lg:col-span-7 space-y-6">
+          <MetricsGrid metrics={metrics} />
+          
+          <QuickActions />
+
+          {/* Pending Actions List */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-mono">
+                Pending Actions Today
+              </h3>
+              {totalPendingActions > 0 && (
+                <Badge className="bg-red-950/20 text-red-400 border border-red-900/30 text-[8px] font-black uppercase tracking-widest font-mono">
+                  {totalPendingActions} Require Action
+                </Badge>
+              )}
+            </div>
+
+            <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-3.5">
+              {!hasPendingRegistrations && pending_actions.pending_appeals_count === 0 ? (
+                <div className="text-center py-6 space-y-2 flex flex-col items-center justify-center">
+                  <RiFileList3Line className="w-7 h-7 text-zinc-650" />
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-mono">All Tasks Completed</p>
+                  <p className="text-[9px] text-zinc-550 max-w-[200px]">You are all caught up for today! No new approvals or tasks mapped.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Pending Registrations alert row */}
+                  {hasPendingRegistrations && (
+                    <div className="p-3 bg-zinc-900/25 border border-zinc-850 rounded-xl flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                      <div className="space-y-0.5">
+                        <h4 className="text-xs font-black text-white">Pending Registrations</h4>
+                        <p className="text-[10px] text-zinc-500 font-medium">
+                          {pending_actions.pending_registrations.length} student signup requests waiting for review
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => router.push("/members?tab=Pending")}
+                        className="h-7 px-2.5 rounded-lg text-[9px] font-black bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-850 flex items-center gap-0.5 shrink-0"
+                      >
+                        Approve
+                        <RiArrowRightSLine className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Pending Appeals alert row */}
+                  {pending_actions.pending_appeals_count > 0 && (
+                    <div className="p-3 bg-zinc-900/25 border border-zinc-850 rounded-xl flex items-center justify-between gap-3 hover:border-zinc-800 transition-colors">
+                      <div className="space-y-0.5">
+                        <h4 className="text-xs font-black text-white">Pending Point Appeals</h4>
+                        <p className="text-[10px] text-zinc-500 font-medium">
+                          {pending_actions.pending_appeals_count} credit dispute tickets pending admin arbitration
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => router.push("/points?tab=Appeals")}
+                        className="h-7 px-2.5 rounded-lg text-[9px] font-black bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-850 flex items-center gap-0.5 shrink-0"
+                      >
+                        Audit
+                        <RiArrowRightSLine className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: System Warnings + Live Activity Feed */}
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-4">
+          <AlertsSection alerts={alerts} />
+          
+          <ActivityFeed 
+            activities={activity_feed} 
+            isRefreshing={refreshing}
+            onManualRefresh={() => fetchHomeData()}
+          />
+        </div>
+
+      </div>
+
     </div>
   );
 }
