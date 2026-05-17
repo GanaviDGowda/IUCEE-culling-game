@@ -439,16 +439,13 @@ export default function AdminSystemDashboard() {
       {activeTab === "rules" && (
         <form onSubmit={handleSaveRules} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           
-          {/* Points allocation editor */}
-          <div className="md:col-span-2 space-y-4 bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl">
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
-              Activity Point Ledger Allocations
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1">
+          {/* Points allocation editor inline strap */}
+          <div className="md:col-span-3 bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl">
+            <div className="flex flex-wrap lg:flex-nowrap items-end gap-4">
+              
+              <div className="space-y-1.5 flex-1 min-w-[130px] text-left">
                 <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">
-                  Attendance points
+                  Attendance Points
                 </label>
                 <input 
                   type="number" 
@@ -459,9 +456,9 @@ export default function AdminSystemDashboard() {
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5 flex-1 min-w-[130px] text-left">
                 <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">
-                  Presentation points
+                  Presentation Points
                 </label>
                 <input 
                   type="number" 
@@ -472,9 +469,9 @@ export default function AdminSystemDashboard() {
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5 flex-1 min-w-[130px] text-left">
                 <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">
-                  Project updates points
+                  Project Updates
                 </label>
                 <input 
                   type="number" 
@@ -485,9 +482,9 @@ export default function AdminSystemDashboard() {
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5 flex-1 min-w-[130px] text-left">
                 <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">
-                  Referral points
+                  Referral Points
                 </label>
                 <input 
                   type="number" 
@@ -497,22 +494,23 @@ export default function AdminSystemDashboard() {
                   required
                 />
               </div>
-            </div>
 
-            <div className="flex justify-end pt-3">
-              <Button
-                type="submit"
-                disabled={savingRules}
-                className="h-8 px-4 rounded-xl text-xs font-black bg-red-600 hover:bg-red-500 text-white flex items-center gap-1.5 transition-colors shrink-0"
-              >
-                <RiCheckDoubleLine className="w-4 h-4" />
-                {savingRules ? "Synchronizing..." : "Synchronize Activity Rules"}
-              </Button>
+              <div className="shrink-0 pb-0.5 w-full lg:w-auto">
+                <Button
+                  type="submit"
+                  disabled={savingRules}
+                  className="w-full lg:w-auto h-9 px-4 rounded-xl text-xs font-black bg-red-600 hover:bg-red-500 text-white flex items-center justify-center gap-1.5 transition-colors shrink-0"
+                >
+                  <RiCheckDoubleLine className="w-4 h-4" />
+                  {savingRules ? "Syncing..." : "Sync Rules"}
+                </Button>
+              </div>
+
             </div>
           </div>
 
           {/* Gamification triggers */}
-          <div className="space-y-4 bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl">
+          <div className="md:col-span-3 space-y-4 bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl">
             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
               Streak & CIE Skip rules
             </h3>
