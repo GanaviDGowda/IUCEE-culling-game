@@ -46,10 +46,23 @@ export default function AdminSystemDashboard() {
   const [streakMultiplier, setStreakMultiplier] = useState(1.5);
   const [savingRules, setSavingRules] = useState(false);
 
-  // Form States - Tiers
+  // Form States - Tiers & Badges
   const [eliteThresh, setEliteThresh] = useState(200);
   const [domainThresh, setDomainThresh] = useState(450);
   const [savingTiers, setSavingTiers] = useState(false);
+
+  // Badge assignment
+  const [selectedStudent, setSelectedStudent] = useState("");
+  const [selectedBadge, setSelectedBadge] = useState("");
+  const [assigningBadge, setAssigningBadge] = useState(false);
+
+  // Badge creation
+  const [newBadgeSlug, setNewBadgeSlug] = useState("");
+  const [newBadgeName, setNewBadgeName] = useState("");
+  const [newBadgeDesc, setNewBadgeDesc] = useState("");
+  const [newBadgeType, setNewBadgeType] = useState("milestone");
+  const [newBadgeIcon, setNewBadgeIcon] = useState("");
+  const [uploadingBadge, setUploadingBadge] = useState(false);
 
   // Cosmetic Atmosphere States
   const [particleDensity, setParticleDensity] = useState(50);
@@ -127,6 +140,73 @@ export default function AdminSystemDashboard() {
       console.error(err);
     } finally {
       setSavingTiers(false);
+    }
+  };
+
+  // Handler - Assign Badge
+  const handleAssignBadge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudent || !selectedBadge) return;
+    setAssigningBadge(true);
+    try {
+      const res = await fetch("/api/admin/system", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "assign_badge",
+          user_id: selectedStudent,
+          badge_id: selectedBadge
+        })
+      });
+      if (res.ok) {
+        setSelectedStudent("");
+        setSelectedBadge("");
+        alert("Badge successfully assigned to student user.");
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to assign badge.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAssigningBadge(false);
+    }
+  };
+
+  // Handler - Upload Badge
+  const handleUploadBadge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBadgeSlug || !newBadgeName) return;
+    setUploadingBadge(true);
+    try {
+      const res = await fetch("/api/admin/system", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "upload_badge",
+          slug: newBadgeSlug,
+          name: newBadgeName,
+          description: newBadgeDesc,
+          type: newBadgeType,
+          icon_url: newBadgeIcon || null
+        })
+      });
+      if (res.ok) {
+        setNewBadgeSlug("");
+        setNewBadgeName("");
+        setNewBadgeDesc("");
+        setNewBadgeType("milestone");
+        setNewBadgeIcon("");
+        await fetchSystemData();
+        alert("Custom badge provisioned and added to catalogue.");
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to provision badge.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingBadge(false);
     }
   };
 
@@ -782,32 +862,154 @@ export default function AdminSystemDashboard() {
             </div>
           </form>
 
-          {/* Badge catalogue */}
-          <div className="lg:col-span-7 space-y-4 bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl">
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
-              Colony Badges Catalogue
-            </h3>
+          {/* Badge catalogue, assignments and uploads */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Badge List Card */}
+            <div className="bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl space-y-4 text-left">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
+                Colony Badges Catalogue
+              </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              {[
-                { slug: "streak_master", name: "Streak Master", desc: "Complete an 8-meeting streak without using skip.", type: "streak" },
-                { slug: "funded", name: "Funded!", desc: "Project receives verified external funding.", type: "project" },
-                { slug: "domain_master", name: "Domain Master", desc: "Reach Tier 3 for the first time.", type: "tier" },
-                { slug: "centurion", name: "Centurion", desc: "Earn 100+ lifetime point metrics.", type: "tier" },
-              ].map((badge) => (
-                <div key={badge.slug} className="p-3 bg-zinc-950/60 border border-zinc-850 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-xs font-black text-white">{badge.name}</h4>
-                    <span className="text-[7px] font-black uppercase text-zinc-550 border border-zinc-900 px-1.5 py-0.5 rounded-md font-heading">
-                      {badge.type}
-                    </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {(data?.badges && data.badges.length > 0 ? data.badges : [
+                  { slug: "streak_master", name: "Streak Master", description: "Complete an 8-meeting streak without using skip.", type: "streak" },
+                  { slug: "funded", name: "Funded!", description: "Project receives verified external funding.", type: "project" },
+                  { slug: "domain_master", name: "Domain Master", description: "Reach Tier 3 for the first time.", type: "tier" },
+                  { slug: "centurion", name: "Centurion", description: "Earn 100+ lifetime point metrics.", type: "tier" },
+                ]).map((badge: any) => (
+                  <div key={badge.slug || badge.id} className="p-3 bg-zinc-950/60 border border-zinc-850 rounded-xl space-y-1.5 text-left">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-xs font-black text-white">{badge.name}</h4>
+                      <span className="text-[7px] font-black uppercase text-zinc-550 border border-zinc-900 px-1.5 py-0.5 rounded-md font-heading">
+                        {badge.type || "award"}
+                      </span>
+                    </div>
+                    <p className="text-[9.5px] text-zinc-500 leading-normal">
+                      {badge.description}
+                    </p>
                   </div>
-                  <p className="text-[9px] text-zinc-500 leading-normal">
-                    {badge.desc}
-                  </p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
+            {/* Assign Badge Section */}
+            <form onSubmit={handleAssignBadge} className="bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl space-y-4 text-left">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
+                Assign Achievement Badge
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Select Student</label>
+                  <select
+                    value={selectedStudent}
+                    onChange={(e) => setSelectedStudent(e.target.value)}
+                    className="w-full h-9 bg-zinc-950 border border-zinc-850 rounded-xl px-3 text-xs text-white focus:outline-none"
+                    required
+                  >
+                    <option value="">-- Choose student --</option>
+                    {(data?.students || []).map((s: any) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.branch} Y{s.year})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Select Badge</label>
+                  <select
+                    value={selectedBadge}
+                    onChange={(e) => setSelectedBadge(e.target.value)}
+                    className="w-full h-9 bg-zinc-950 border border-zinc-850 rounded-xl px-3 text-xs text-white focus:outline-none"
+                    required
+                  >
+                    <option value="">-- Choose badge --</option>
+                    {(data?.badges || []).map((b: any) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={assigningBadge || !(data?.badges?.length) || !(data?.students?.length)}
+                  className="h-8 px-4 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-1.5 transition-colors shrink-0"
+                >
+                  <RiCheckDoubleLine className="w-4 h-4" />
+                  {assigningBadge ? "Assigning..." : "Assign Achievement Badge"}
+                </Button>
+              </div>
+            </form>
+
+            {/* Create Custom Badge Form */}
+            <form onSubmit={handleUploadBadge} className="bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl space-y-4 text-left">
+              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
+                Provision Custom Badge
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Badge Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Master Hacker"
+                    value={newBadgeName}
+                    onChange={(e) => {
+                      setNewBadgeName(e.target.value);
+                      setNewBadgeSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "_"));
+                    }}
+                    className="w-full h-9 bg-zinc-950 border border-zinc-850 focus:border-red-500/50 rounded-xl px-3 text-xs text-white focus:outline-none transition-colors"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Badge Type</label>
+                  <select
+                    value={newBadgeType}
+                    onChange={(e) => setNewBadgeType(e.target.value)}
+                    className="w-full h-9 bg-zinc-950 border border-zinc-850 rounded-xl px-3 text-xs text-white focus:outline-none"
+                    required
+                  >
+                    <option value="milestone">Milestone</option>
+                    <option value="achievement">Achievement</option>
+                    <option value="streak">Streak Bonus</option>
+                    <option value="project">Project Claim</option>
+                    <option value="tier">Gamified Tier</option>
+                    <option value="social">Referral/Social</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Badge Description</label>
+                <textarea 
+                  placeholder="Describe the qualifications required to earn this badge..."
+                  value={newBadgeDesc}
+                  onChange={(e) => setNewBadgeDesc(e.target.value)}
+                  className="w-full h-16 bg-zinc-950 border border-zinc-850 focus:border-red-500/50 rounded-xl p-3 text-xs text-white focus:outline-none transition-colors resize-none"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="submit"
+                  disabled={uploadingBadge}
+                  className="h-8 px-4 rounded-xl text-xs font-black bg-red-600 hover:bg-red-500 text-white flex items-center gap-1.5 transition-colors shrink-0"
+                >
+                  <RiAddCircleLine className="w-4 h-4" />
+                  {uploadingBadge ? "Provisioning..." : "Provision Custom Badge"}
+                </Button>
+              </div>
+            </form>
+
           </div>
 
         </div>

@@ -24,7 +24,24 @@ export async function GET() {
 
     if (hErr) throw hErr;
 
-    // 3. Fetch point rules from a static/dynamic ledger or mock config
+    // 3. Fetch badges catalogue
+    const { data: badges, error: bErr } = await supabase
+      .from("badges")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (bErr) throw bErr;
+
+    // 4. Fetch students for assignment
+    const { data: students, error: sErr } = await supabase
+      .from("users")
+      .select("id, name, branch, year")
+      .eq("role", "student")
+      .order("name", { ascending: true });
+
+    if (sErr) throw sErr;
+
+    // 5. Fetch point rules from static/dynamic mock config
     const pointRules = {
       attendance: 10,
       presentation: 25,
@@ -39,6 +56,8 @@ export async function GET() {
     return NextResponse.json({
       quarters: quarters || [],
       holidays: holidays || [],
+      badges: badges || [],
+      students: students || [],
       pointRules
     });
 
@@ -162,6 +181,30 @@ export async function POST(req: Request) {
 
       if (error) throw error;
       return NextResponse.json({ success: true });
+    }
+
+    if (action === "assign_badge") {
+      const { user_id, badge_id } = payload;
+      const { data, error } = await supabase
+        .from("user_badges")
+        .insert([{ user_id, badge_id }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, user_badge: data });
+    }
+
+    if (action === "upload_badge") {
+      const { slug, name, description, type, icon_url } = payload;
+      const { data, error } = await supabase
+        .from("badges")
+        .insert([{ slug, name, description, type, icon_url }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, badge: data });
     }
 
     return NextResponse.json({ error: "Unsupported system action method" }, { status: 400 });
