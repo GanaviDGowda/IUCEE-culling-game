@@ -10,22 +10,17 @@ export async function getSession() {
 
     if (authError || !user) return null;
 
-    // First try to get the role from user metadata
-    let role = user.user_metadata?.role;
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("auth_id", user.id)
+      .maybeSingle();
 
-    // Fallback to db query
-    if (!role) {
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("auth_id", user.id)
-        .single();
-      if (profile) {
-        role = profile.role;
-      }
+    if (!profile) {
+      return null;
     }
 
-    return { user, role };
+    return { user, role: profile.role };
   } catch {
     return null;
   }

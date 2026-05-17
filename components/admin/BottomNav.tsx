@@ -13,11 +13,11 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { name: "Home", href: "/admin/home", icon: LayoutDashboard },
-  { name: "Members", href: "/admin/members", icon: Users },
-  { name: "Points", href: "/admin/points", icon: Bolt },
-  { name: "Events", href: "/admin/events", icon: Calendar },
-  { name: "More", href: "/admin/more", icon: Menu }, // Or MenuSquare
+  { name: "Home", href: "/home", icon: LayoutDashboard },
+  { name: "Members", href: "/members", icon: Users },
+  { name: "Points", href: "/points", icon: Bolt },
+  { name: "Events", href: "/events", icon: Calendar },
+  { name: "More", href: "/more", icon: Menu }, // Or MenuSquare
 ];
 
 export function BottomNav() {

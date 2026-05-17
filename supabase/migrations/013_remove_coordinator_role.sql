@@ -6,6 +6,59 @@
 -- 1. Data
 UPDATE public.users SET role = 'nodal_officer'::user_role WHERE role = 'coordinator'::user_role;
 
+-- 1.5 Drop policies that depend on the column type or need recreation
+DROP POLICY IF EXISTS "users_read_all" ON public.users;
+DROP POLICY IF EXISTS "users_update_own" ON public.users;
+DROP POLICY IF EXISTS "users_admin_insert" ON public.users;
+DROP POLICY IF EXISTS "users_admin_delete" ON public.users;
+
+DROP POLICY IF EXISTS "point_logs_read" ON public.point_logs;
+DROP POLICY IF EXISTS "point_logs_conveyor_insert" ON public.point_logs;
+DROP POLICY IF EXISTS "point_logs_admin_update" ON public.point_logs;
+DROP POLICY IF EXISTS "point_logs_student_appeal" ON public.point_logs;
+
+DROP POLICY IF EXISTS "meetings_read_all" ON public.meetings;
+DROP POLICY IF EXISTS "meetings_create" ON public.meetings;
+DROP POLICY IF EXISTS "meetings_update" ON public.meetings;
+
+DROP POLICY IF EXISTS "attendance_read_all" ON public.attendance;
+DROP POLICY IF EXISTS "attendance_admin_insert" ON public.attendance;
+DROP POLICY IF EXISTS "attendance_admin_delete" ON public.attendance;
+
+DROP POLICY IF EXISTS "events_read_all" ON public.events;
+DROP POLICY IF EXISTS "events_privileged_write" ON public.events;
+
+DROP POLICY IF EXISTS "event_reg_read" ON public.event_registrations;
+DROP POLICY IF EXISTS "event_reg_self_insert" ON public.event_registrations;
+DROP POLICY IF EXISTS "event_reg_admin_update" ON public.event_registrations;
+
+DROP POLICY IF EXISTS "projects_read_all" ON public.projects;
+DROP POLICY IF EXISTS "projects_write_own" ON public.projects;
+DROP POLICY IF EXISTS "projects_update_own_or_admin" ON public.projects;
+
+DROP POLICY IF EXISTS "project_updates_read" ON public.project_updates;
+DROP POLICY IF EXISTS "project_updates_submit" ON public.project_updates;
+DROP POLICY IF EXISTS "project_updates_review" ON public.project_updates;
+
+DROP POLICY IF EXISTS "announcements_read_all" ON public.announcements;
+DROP POLICY IF EXISTS "announcements_write" ON public.announcements;
+DROP POLICY IF EXISTS "announcements_update_own_or_admin" ON public.announcements;
+
+DROP POLICY IF EXISTS "grace_read_own_or_admin" ON public.grace_periods;
+DROP POLICY IF EXISTS "grace_insert_own" ON public.grace_periods;
+DROP POLICY IF EXISTS "grace_update_admin" ON public.grace_periods;
+
+DROP POLICY IF EXISTS "mentorships_read_all" ON public.mentorships;
+DROP POLICY IF EXISTS "mentorships_admin_write" ON public.mentorships;
+
+DROP POLICY IF EXISTS "notifications_own" ON public.notifications;
+
+DROP POLICY IF EXISTS "user_badges_read_all" ON public.user_badges;
+DROP POLICY IF EXISTS "user_badges_admin_write" ON public.user_badges;
+
+DROP POLICY IF EXISTS "skip_tokens_own" ON public.skip_tokens;
+DROP POLICY IF EXISTS "skip_tokens_admin_write" ON public.skip_tokens;
+
 -- 2. Detach column from enum
 ALTER TABLE public.users
   ALTER COLUMN role TYPE text USING (role::text);
@@ -17,6 +70,9 @@ DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 -- 4. Drop RLS helpers (CASCADE clears policies that reference them)
 DROP FUNCTION IF EXISTS public.get_my_role() CASCADE;
 DROP FUNCTION IF EXISTS public.get_my_user_id() CASCADE;
+
+-- 4.5 Drop default value of role column
+ALTER TABLE public.users ALTER COLUMN role DROP DEFAULT;
 
 -- 5. Replace enum
 DROP TYPE IF EXISTS public.user_role;

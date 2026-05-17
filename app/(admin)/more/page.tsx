@@ -7,31 +7,31 @@ import { SignOutButton } from "@/components/admin/SignOutButton";
 const moreMenuItems = [
   { 
     name: "Projects", 
-    href: "/admin/projects", 
+    href: "/projects", 
     icon: FolderKanban, 
     description: "Active projects and funding claims" 
   },
   { 
     name: "Communication", 
-    href: "/admin/communication", 
+    href: "/communication", 
     icon: MessageSquareShare, 
     description: "Notifications and alerts" 
   },
   { 
     name: "Leaderboards", 
-    href: "/admin/leaderboards", 
+    href: "/leaderboards", 
     icon: Trophy, 
     description: "Domain rankings and tier distribution" 
   },
   { 
     name: "Analytics", 
-    href: "/admin/analytics", 
+    href: "/analytics", 
     icon: LineChart, 
     description: "Engagement and performance metrics" 
   },
   { 
     name: "System", 
-    href: "/admin/system", 
+    href: "/system", 
     icon: Settings, 
     description: "Colony and danger zone configurations" 
   },

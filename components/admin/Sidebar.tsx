@@ -3,29 +3,29 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Users,
-  Bolt,
-  Calendar,
-  FolderKanban,
-  MessageSquareShare,
-  Trophy,
-  LineChart,
-  Settings,
-} from "lucide-react";
+  RiDashboardLine,
+  RiGroupLine,
+  RiFlashlightLine,
+  RiCalendarEventLine,
+  RiFolderShield2Line,
+  RiChat3Line,
+  RiTrophyLine,
+  RiBarChartLine,
+  RiSettings4Line,
+} from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 const navItems = [
-  { name: "Home", href: "/admin/home", icon: LayoutDashboard },
-  { name: "Members", href: "/admin/members", icon: Users },
-  { name: "Points", href: "/admin/points", icon: Bolt },
-  { name: "Events", href: "/admin/events", icon: Calendar },
-  { name: "Projects", href: "/admin/projects", icon: FolderKanban },
-  { name: "Communication", href: "/admin/communication", icon: MessageSquareShare },
-  { name: "Leaderboards", href: "/admin/leaderboards", icon: Trophy },
-  { name: "Analytics", href: "/admin/analytics", icon: LineChart },
-  { name: "System", href: "/admin/system", icon: Settings },
+  { name: "Home", href: "/home", icon: RiDashboardLine },
+  { name: "Members", href: "/members", icon: RiGroupLine },
+  { name: "Points", href: "/points", icon: RiFlashlightLine },
+  { name: "Events", href: "/events", icon: RiCalendarEventLine },
+  { name: "Projects", href: "/projects", icon: RiFolderShield2Line },
+  { name: "Communication", href: "/communication", icon: RiChat3Line },
+  { name: "Leaderboards", href: "/leaderboards", icon: RiTrophyLine },
+  { name: "Analytics", href: "/analytics", icon: RiBarChartLine },
+  { name: "System", href: "/system", icon: RiSettings4Line },
 ];
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";

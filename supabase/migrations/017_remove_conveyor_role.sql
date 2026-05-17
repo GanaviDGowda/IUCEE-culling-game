@@ -1,0 +1,334 @@
+-- Migration 017: Remove conveyor role
+-- 1. Reassign any conveyor rows to nodal_officer
+UPDATE public.users SET role = 'nodal_officer'::public.user_role WHERE role = 'conveyor'::public.user_role;
+
+-- 1.5 Drop policies that depend on the column type or need recreation
+DROP POLICY IF EXISTS "users_read_all" ON public.users;
+DROP POLICY IF EXISTS "users_update_own" ON public.users;
+DROP POLICY IF EXISTS "users_admin_insert" ON public.users;
+DROP POLICY IF EXISTS "users_admin_delete" ON public.users;
+
+DROP POLICY IF EXISTS "point_logs_read" ON public.point_logs;
+DROP POLICY IF EXISTS "point_logs_conveyor_insert" ON public.point_logs;
+DROP POLICY IF EXISTS "point_logs_admin_update" ON public.point_logs;
+DROP POLICY IF EXISTS "point_logs_student_appeal" ON public.point_logs;
+
+DROP POLICY IF EXISTS "meetings_read_all" ON public.meetings;
+DROP POLICY IF EXISTS "meetings_create" ON public.meetings;
+DROP POLICY IF EXISTS "meetings_update" ON public.meetings;
+
+DROP POLICY IF EXISTS "attendance_read_all" ON public.attendance;
+DROP POLICY IF EXISTS "attendance_admin_insert" ON public.attendance;
+DROP POLICY IF EXISTS "attendance_admin_delete" ON public.attendance;
+
+DROP POLICY IF EXISTS "events_read_all" ON public.events;
+DROP POLICY IF EXISTS "events_privileged_write" ON public.events;
+
+DROP POLICY IF EXISTS "event_reg_read" ON public.event_registrations;
+DROP POLICY IF EXISTS "event_reg_self_insert" ON public.event_registrations;
+DROP POLICY IF EXISTS "event_reg_admin_update" ON public.event_registrations;
+
+DROP POLICY IF EXISTS "projects_read_all" ON public.projects;
+DROP POLICY IF EXISTS "projects_write_own" ON public.projects;
+DROP POLICY IF EXISTS "projects_update_own_or_admin" ON public.projects;
+
+DROP POLICY IF EXISTS "project_updates_read" ON public.project_updates;
+DROP POLICY IF EXISTS "project_updates_submit" ON public.project_updates;
+DROP POLICY IF EXISTS "project_updates_review" ON public.project_updates;
+
+DROP POLICY IF EXISTS "announcements_read_all" ON public.announcements;
+DROP POLICY IF EXISTS "announcements_write" ON public.announcements;
+DROP POLICY IF EXISTS "announcements_update_own_or_admin" ON public.announcements;
+
+DROP POLICY IF EXISTS "grace_read_own_or_admin" ON public.grace_periods;
+DROP POLICY IF EXISTS "grace_insert_own" ON public.grace_periods;
+DROP POLICY IF EXISTS "grace_update_admin" ON public.grace_periods;
+
+DROP POLICY IF EXISTS "mentorships_read_all" ON public.mentorships;
+DROP POLICY IF EXISTS "mentorships_admin_write" ON public.mentorships;
+
+DROP POLICY IF EXISTS "notifications_own" ON public.notifications;
+
+DROP POLICY IF EXISTS "user_badges_read_all" ON public.user_badges;
+DROP POLICY IF EXISTS "user_badges_admin_write" ON public.user_badges;
+
+DROP POLICY IF EXISTS "skip_tokens_own" ON public.skip_tokens;
+DROP POLICY IF EXISTS "skip_tokens_admin_write" ON public.skip_tokens;
+
+-- 2. Detach column from enum
+ALTER TABLE public.users
+  ALTER COLUMN role TYPE text USING (role::text);
+
+-- 3. Drop auth trigger + profile function (so we can recreate the enum)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+
+-- 3.3 Drop get_my_role helper since its return type depends on user_role
+DROP FUNCTION IF EXISTS public.get_my_role() CASCADE;
+
+-- 3.5 Drop default value of role column
+ALTER TABLE public.users ALTER COLUMN role DROP DEFAULT;
+
+-- 4. Recreate enum without conveyor
+DROP TYPE IF EXISTS public.user_role;
+CREATE TYPE public.user_role AS ENUM (
+  'student', 'nodal_officer', 'admin'
+);
+
+-- 5. Restore role column with new enum
+ALTER TABLE public.users
+  ALTER COLUMN role TYPE public.user_role USING (
+    CASE lower(trim(role))
+      WHEN 'student' THEN 'student'::public.user_role
+      WHEN 'nodal_officer' THEN 'nodal_officer'::public.user_role
+      WHEN 'admin' THEN 'admin'::public.user_role
+      ELSE 'nodal_officer'::public.user_role
+    END
+  );
+
+ALTER TABLE public.users
+  ALTER COLUMN role SET DEFAULT 'student'::public.user_role;
+
+-- 6. Re-implement handle_new_user without conveyor mapping
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  new_user_id UUID;
+  mapped_role public.user_role;
+BEGIN
+  mapped_role := CASE lower(trim(COALESCE(NEW.raw_user_meta_data->>'role', 'student')))
+    WHEN 'student' THEN 'student'::public.user_role
+    WHEN 'nodal_officer' THEN 'nodal_officer'::public.user_role
+    WHEN 'admin' THEN 'admin'::public.user_role
+    ELSE 'student'::public.user_role
+  END;
+
+  INSERT INTO public.users (auth_id, email, name, role, branch, year)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', 'Unknown Player'),
+    mapped_role,
+    NEW.raw_user_meta_data->>'branch',
+    NEW.raw_user_meta_data->>'year'
+  )
+  ON CONFLICT (auth_id) DO UPDATE
+  SET
+    email = EXCLUDED.email,
+    name = EXCLUDED.name,
+    role = EXCLUDED.role,
+    branch = EXCLUDED.branch,
+    year = EXCLUDED.year
+  RETURNING id INTO new_user_id;
+
+  BEGIN
+    INSERT INTO public.notifications (user_id, type, title, body)
+    VALUES (
+      new_user_id,
+      'points_awarded',
+      'Welcome to the Culling Game',
+      'Your account has been created. May your cursed technique prevail.'
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      RAISE LOG 'handle_new_user welcome notification failed: %', SQLERRM;
+  END;
+
+  RETURN NEW;
+END;
+$$;
+
+-- 7. Restore the trigger
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 8. Update get_my_role helper
+CREATE OR REPLACE FUNCTION public.get_my_role()
+RETURNS public.user_role LANGUAGE sql SECURITY DEFINER STABLE AS $$
+  SELECT role FROM public.users WHERE auth_id = auth.uid();
+$$;
+
+-- 9. Restore ALL RLS Policies (without conveyor)
+-- 9.1 users
+CREATE POLICY "users_read_all" ON public.users
+  FOR SELECT USING (true);
+
+CREATE POLICY "users_update_own" ON public.users
+  FOR UPDATE
+  USING (auth_id = auth.uid() OR get_my_role() = 'admin')
+  WITH CHECK (
+    get_my_role() = 'admin' OR (
+      auth_id = auth.uid()
+      AND role            = (SELECT role            FROM public.users WHERE auth_id = auth.uid())
+      AND redeemable_pts  = (SELECT redeemable_pts  FROM public.users WHERE auth_id = auth.uid())
+      AND lifetime_pts    = (SELECT lifetime_pts    FROM public.users WHERE auth_id = auth.uid())
+      AND tier            = (SELECT tier            FROM public.users WHERE auth_id = auth.uid())
+      AND status          = (SELECT status          FROM public.users WHERE auth_id = auth.uid())
+    )
+  );
+
+CREATE POLICY "users_admin_insert" ON public.users
+  FOR INSERT WITH CHECK (get_my_role() = 'admin');
+
+CREATE POLICY "users_admin_delete" ON public.users
+  FOR DELETE USING (get_my_role() = 'admin');
+
+-- 9.2 point_logs
+CREATE POLICY "point_logs_read" ON public.point_logs
+  FOR SELECT USING (
+    user_id = get_my_user_id() OR
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+CREATE POLICY "point_logs_nodal_insert" ON public.point_logs
+  FOR INSERT WITH CHECK (
+    get_my_role() IN ('nodal_officer', 'admin') AND
+    status = 'pending'
+  );
+
+CREATE POLICY "point_logs_admin_update" ON public.point_logs
+  FOR UPDATE USING (get_my_role() = 'admin');
+
+CREATE POLICY "point_logs_student_appeal" ON public.point_logs
+  FOR UPDATE
+  USING (
+    user_id = get_my_user_id() AND
+    status  = 'confirmed' AND
+    appeal_status IS NULL
+  )
+  WITH CHECK (
+    user_id       = get_my_user_id() AND
+    appeal_status = 'pending'
+  );
+
+-- 9.3 meetings
+CREATE POLICY "meetings_read_all" ON public.meetings
+  FOR SELECT USING (true);
+
+CREATE POLICY "meetings_create" ON public.meetings
+  FOR INSERT WITH CHECK (
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+CREATE POLICY "meetings_update" ON public.meetings
+  FOR UPDATE USING (
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+-- 9.4 attendance
+CREATE POLICY "attendance_read_all" ON public.attendance
+  FOR SELECT USING (true);
+
+CREATE POLICY "attendance_nodal_insert" ON public.attendance
+  FOR INSERT WITH CHECK (get_my_role() IN ('admin', 'nodal_officer'));
+
+CREATE POLICY "attendance_admin_delete" ON public.attendance
+  FOR DELETE USING (get_my_role() = 'admin');
+
+-- 9.5 events
+CREATE POLICY "events_read_all" ON public.events
+  FOR SELECT USING (true);
+
+CREATE POLICY "events_privileged_write" ON public.events
+  FOR ALL USING (
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+-- 9.6 event_registrations
+CREATE POLICY "event_reg_read" ON public.event_registrations
+  FOR SELECT USING (
+    user_id = get_my_user_id() OR
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+CREATE POLICY "event_reg_self_insert" ON public.event_registrations
+  FOR INSERT WITH CHECK (user_id = get_my_user_id());
+
+CREATE POLICY "event_reg_admin_update" ON public.event_registrations
+  FOR UPDATE USING (
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+-- 9.7 projects
+CREATE POLICY "projects_read_all" ON public.projects
+  FOR SELECT USING (true);
+
+CREATE POLICY "projects_write_own" ON public.projects
+  FOR INSERT WITH CHECK (owner_id = get_my_user_id());
+
+CREATE POLICY "projects_update_own_or_admin" ON public.projects
+  FOR UPDATE USING (
+    owner_id = get_my_user_id() OR get_my_role() = 'admin'
+  );
+
+-- 9.8 project_updates
+CREATE POLICY "project_updates_read" ON public.project_updates
+  FOR SELECT USING (
+    user_id = get_my_user_id() OR
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+CREATE POLICY "project_updates_submit" ON public.project_updates
+  FOR INSERT WITH CHECK (user_id = get_my_user_id());
+
+CREATE POLICY "project_updates_review" ON public.project_updates
+  FOR UPDATE USING (get_my_role() IN ('admin', 'nodal_officer'));
+
+-- 9.9 announcements
+CREATE POLICY "announcements_read_all" ON public.announcements
+  FOR SELECT USING (true);
+
+CREATE POLICY "announcements_write" ON public.announcements
+  FOR INSERT WITH CHECK (
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+CREATE POLICY "announcements_update_own_or_admin" ON public.announcements
+  FOR UPDATE USING (
+    author_id = get_my_user_id() OR get_my_role() = 'admin'
+  );
+
+-- 9.10 grace_periods
+CREATE POLICY "grace_read_own_or_admin" ON public.grace_periods
+  FOR SELECT USING (
+    user_id = get_my_user_id() OR
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+CREATE POLICY "grace_insert_own" ON public.grace_periods
+  FOR INSERT WITH CHECK (user_id = get_my_user_id());
+
+CREATE POLICY "grace_update_admin" ON public.grace_periods
+  FOR UPDATE USING (
+    get_my_role() IN ('admin', 'nodal_officer')
+  );
+
+-- 9.11 mentorships
+CREATE POLICY "mentorships_read_all" ON public.mentorships
+  FOR SELECT USING (true);
+
+CREATE POLICY "mentorships_admin_write" ON public.mentorships
+  FOR ALL USING (get_my_role() = 'admin');
+
+-- 9.12 notifications
+CREATE POLICY "notifications_own" ON public.notifications
+  FOR ALL USING (user_id = get_my_user_id());
+
+-- 9.13 user_badges
+CREATE POLICY "user_badges_read_all" ON public.user_badges
+  FOR SELECT USING (true);
+
+CREATE POLICY "user_badges_admin_write" ON public.user_badges
+  FOR ALL USING (get_my_role() = 'admin');
+
+-- 9.14 skip_tokens
+CREATE POLICY "skip_tokens_own" ON public.skip_tokens
+  FOR SELECT USING (user_id = get_my_user_id());
+
+CREATE POLICY "skip_tokens_admin_write" ON public.skip_tokens
+  FOR ALL USING (get_my_role() = 'admin');

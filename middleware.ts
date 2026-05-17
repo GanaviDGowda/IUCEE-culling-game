@@ -1,6 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const adminPaths = [
+  "/members",
+  "/events",
+  "/projects",
+  "/points",
+  "/analytics",
+  "/system",
+  "/communication",
+  "/leaderboards",
+  "/more",
+];
+
 export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -28,35 +40,47 @@ export async function middleware(request: NextRequest) {
       },
     });
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { pathname } = request.nextUrl;
     const isAuthRoute = pathname.startsWith("/auth");
+    const isPendingRoute = pathname === "/auth/pending";
     const isRootRoute = pathname === "/";
-    const isAdminRoute = pathname.startsWith("/admin");
+    const isAdminRoute = adminPaths.some((p) => pathname.startsWith(p));
 
     if (!user) {
-      // If not logged in and not on an auth route, redirect to login
       if (!isAuthRoute) {
         return NextResponse.redirect(new URL("/auth/login", request.url));
       }
-    } else {
-      // If logged in
-      const role = user.user_metadata?.role;
-      const roleHome = role === "admin" ? "/admin/home" : "/home";
+      return response;
+    }
 
-      // If they try to access root or auth pages while logged in, redirect to their home
-      if (isAuthRoute || isRootRoute) {
-        return NextResponse.redirect(new URL(roleHome, request.url));
-      }
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("auth_id", user.id)
+      .maybeSingle();
 
-      // Admin route protection
-      if (isAdminRoute && role !== "admin") {
-        return NextResponse.redirect(new URL("/unauthorized", request.url));
+    const hasApprovedProfile = Boolean(profile);
+
+    if (!hasApprovedProfile) {
+      if (!isPendingRoute) {
+        return NextResponse.redirect(new URL("/auth/pending", request.url));
       }
+      return response;
+    }
+
+    if (isPendingRoute || isAuthRoute || isRootRoute) {
+      return NextResponse.redirect(new URL("/home", request.url));
+    }
+
+    if (isAdminRoute && profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
   } catch {
-    // Do not block the page if session refresh fails
+    // Do not block the page if session refresh fails.
   }
 
   return response;
