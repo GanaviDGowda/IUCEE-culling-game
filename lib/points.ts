@@ -14,6 +14,8 @@ export type PointLogType =
   | "mentor_bonus"
   | "referral_bonus"
   | "century_spend"
+  | "ticket_golden"
+  | "ticket_silver"
   | "deduction"
   | "manual_award"
   | "hackathon_first"

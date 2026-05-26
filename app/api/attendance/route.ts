@@ -1,6 +1,125 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
+type AttendanceUpdate = {
+  user_id: string;
+  present: boolean | null;
+  used_skip_token?: boolean;
+  override_note?: string | null;
+};
+
+function formatMeetingStamp(meeting: any) {
+  const dateText = meeting.date ? new Date(`${meeting.date}T00:00:00`).toLocaleDateString("en-IN") : "unscheduled date";
+  const timeText = meeting.time ? String(meeting.time).slice(0, 5) : "time TBA";
+  const venueText = meeting.location || "Remote";
+  return `${meeting.title} on ${dateText} at ${timeText}, ${venueText}`;
+}
+
+async function requireAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { supabase, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("id, role")
+    .eq("auth_id", user.id)
+    .single();
+
+  if (profileError || !profile || profile.role !== "admin") {
+    return { supabase, error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+
+  return { supabase, adminId: profile.id };
+}
+
+async function refreshPresentCount(supabase: any, meetingId: string) {
+  const { count } = await supabase
+    .from("attendance")
+    .select("id", { count: "exact", head: true })
+    .eq("meeting_id", meetingId)
+    .eq("present", true);
+
+  await supabase
+    .from("meetings")
+    .update({ present_count: count || 0 })
+    .eq("id", meetingId);
+}
+
+async function confirmAttendancePointLog(supabase: any, payload: any) {
+  const { data: log, error: insertError } = await supabase
+    .from("point_logs")
+    .insert({
+      ...payload,
+      points: 1,
+      redeemable_delta: 1,
+      lifetime_delta: 1,
+      type: "attendance",
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !log) {
+    throw new Error(insertError?.message || "Failed to create attendance point log");
+  }
+
+  const { error: confirmError } = await supabase
+    .from("point_logs")
+    .update({
+      status: "confirmed",
+      reviewed_by: payload.awarded_by,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", log.id);
+
+  if (confirmError) {
+    throw new Error(confirmError.message);
+  }
+}
+
+async function consumeSkipToken(supabase: any, userId: string, meetingId: string) {
+  const { data: userRecord } = await supabase
+    .from("users")
+    .select("skip_tokens, name")
+    .eq("id", userId)
+    .single();
+
+  if (!userRecord || userRecord.skip_tokens <= 0) {
+    throw new Error(`${userRecord?.name || "Student"} has no skip tokens available.`);
+  }
+
+  await supabase
+    .from("users")
+    .update({ skip_tokens: userRecord.skip_tokens - 1 })
+    .eq("id", userId);
+
+  const { data: token } = await supabase
+    .from("skip_tokens")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("used", false)
+    .limit(1)
+    .maybeSingle();
+
+  if (token) {
+    await supabase
+      .from("skip_tokens")
+      .update({
+        used: true,
+        used_at: new Date().toISOString(),
+        used_for_meeting: meetingId,
+      })
+      .eq("id", token.id);
+  }
+}
+
 export async function GET(request: Request) {
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
@@ -10,7 +129,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing meetingId parameter" }, { status: 400 });
   }
 
-  // If meetingId is "active", resolve the latest meeting chronologically
   if (meetingId === "active") {
     const { data: latestMeeting, error: meetError } = await supabase
       .from("meetings")
@@ -26,7 +144,6 @@ export async function GET(request: Request) {
     meetingId = latestMeeting.id;
   }
 
-  // Get meeting details
   const { data: meeting, error: meetDetailsError } = await supabase
     .from("meetings")
     .select("*")
@@ -37,7 +154,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   }
 
-  // Fetch all active student members
   const { data: students, error: studentsError } = await supabase
     .from("users")
     .select("id, name, email, avatar_url, branch, year, current_streak, skip_tokens")
@@ -49,7 +165,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: studentsError.message }, { status: 500 });
   }
 
-  // Fetch all attendance logs for this meeting
   const { data: attendanceLogs, error: attError } = await supabase
     .from("attendance")
     .select("*")
@@ -59,7 +174,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: attError.message }, { status: 500 });
   }
 
-  // Fetch all cie_bonus point logs for this meeting
   const { data: cieBonusLogs } = await supabase
     .from("point_logs")
     .select("user_id")
@@ -67,19 +181,21 @@ export async function GET(request: Request) {
     .eq("type", "cie_bonus")
     .eq("status", "confirmed");
 
-  // Map students to their attendance records
-  const members = students.map((student) => {
-    const log = attendanceLogs.find((l) => l.user_id === student.id);
+  const members = (students || []).map((student) => {
+    const log = (attendanceLogs || []).find((l) => l.user_id === student.id);
     const hasCieBonus = cieBonusLogs?.some((c) => c.user_id === student.id) ?? false;
     return {
       ...student,
       has_cie_bonus: hasCieBonus,
-      attendance: log ? {
-        id: log.id,
-        present: log.present,
-        used_skip_token: log.used_skip_token,
-        override_note: log.override_note
-      } : null
+      attendance_locked: Boolean(log),
+      attendance: log
+        ? {
+            id: log.id,
+            present: log.present,
+            used_skip_token: log.used_skip_token,
+            override_note: log.present === false ? log.override_note : null,
+          }
+        : null,
     };
   });
 
@@ -87,30 +203,40 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const supabase = await createClient();
-  const { data: { user: adminUser } } = await supabase.auth.getUser();
+  const { supabase, adminId, error: authError } = await requireAdmin();
+  if (authError) return authError;
 
-  if (!adminUser) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // Fetch the admin's database profile ID (to respect attendance_marked_by_fkey)
-  const { data: adminProfile } = await supabase
-    .from("users")
-    .select("id")
-    .eq("auth_id", adminUser.id)
-    .single();
-
-  const realAdminId = adminProfile?.id || null;
-
-  const body = await request.json();
   const { meeting_id, user_id, present, used_skip_token, override_note, bulk, updates } = body;
 
   if (!meeting_id) {
     return NextResponse.json({ error: "Missing meeting_id" }, { status: 400 });
   }
 
-  // Handle bulk check-in (marks all students present)
+  const { data: meeting, error: meetingError } = await supabase
+    .from("meetings")
+    .select("*")
+    .eq("id", meeting_id)
+    .single();
+
+  if (meetingError || !meeting) {
+    return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+  }
+
+  const saveUpdates: AttendanceUpdate[] = Array.isArray(updates)
+    ? updates
+    : bulk
+      ? []
+      : user_id
+        ? [{ user_id, present: present ?? true, used_skip_token, override_note }]
+        : [];
+
   if (bulk) {
     const { data: students, error: studentsError } = await supabase
       .from("users")
@@ -122,338 +248,116 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: studentsError.message }, { status: 500 });
     }
 
-    const rows = students.map((s) => ({
-      meeting_id,
-      user_id: s.id,
-      present: true,
-      used_skip_token: false,
-      marked_by: realAdminId,
-      marked_at: new Date().toISOString()
-    }));
-
-    const { error: upsertError } = await supabase
-      .from("attendance")
-      .upsert(rows, { onConflict: "meeting_id, user_id" });
-
-    if (upsertError) {
-      return NextResponse.json({ error: upsertError.message }, { status: 500 });
-    }
-
-    // Recalculate present_count for meeting
-    await supabase
-      .from("meetings")
-      .update({ present_count: rows.length })
-      .eq("id", meeting_id);
-
-    return NextResponse.json({ success: true, count: rows.length });
+    saveUpdates.push(
+      ...(students || []).map((student) => ({
+        user_id: student.id,
+        present: true,
+        used_skip_token: false,
+        override_note: null,
+      })),
+    );
   }
 
-  // Handle custom bulk updates list
-  if (updates && Array.isArray(updates)) {
-    try {
-      const { data: existingLogs } = await supabase
-        .from("attendance")
-        .select("user_id, used_skip_token")
-        .eq("meeting_id", meeting_id);
-
-      const toUpsert = [];
-      const toDeleteUserIds = [];
-
-      for (const u of updates) {
-        const existing = existingLogs?.find((l) => l.user_id === u.user_id);
-        const wasUsingSkip = existing?.used_skip_token ?? false;
-        const isNowUsingSkip = u.used_skip_token === true;
-
-        if (!wasUsingSkip && isNowUsingSkip) {
-          // Consume Skip Token
-          const { data: userRecord } = await supabase
-            .from("users")
-            .select("skip_tokens")
-            .eq("id", u.user_id)
-            .single();
-
-          if (userRecord && userRecord.skip_tokens > 0) {
-            await supabase
-              .from("users")
-              .update({ skip_tokens: userRecord.skip_tokens - 1 })
-              .eq("id", u.user_id);
-
-            const { data: token } = await supabase
-              .from("skip_tokens")
-              .select("id")
-              .eq("user_id", u.user_id)
-              .eq("used", false)
-              .limit(1)
-              .maybeSingle();
-
-            if (token) {
-              await supabase
-                .from("skip_tokens")
-                .update({
-                  used: true,
-                  used_at: new Date().toISOString(),
-                  used_for_meeting: meeting_id
-                })
-                .eq("id", token.id);
-            }
-
-            const { data: logRes } = await supabase
-              .from("point_logs")
-              .insert({
-                user_id: u.user_id,
-                points: 1,
-                redeemable_delta: 1,
-                lifetime_delta: 1,
-                type: "attendance",
-                note: `Meeting attendance point (CIE Skip token applied)`,
-                status: "pending",
-                meeting_id,
-                awarded_by: realAdminId
-              })
-              .select("id")
-              .single();
-
-            if (logRes) {
-              await supabase
-                .from("point_logs")
-                .update({
-                  status: "confirmed",
-                  reviewed_by: realAdminId,
-                  reviewed_at: new Date().toISOString()
-                })
-                .eq("id", logRes.id);
-            }
-          }
-        } else if (wasUsingSkip && !isNowUsingSkip) {
-          // Refund Skip Token
-          const { data: userRecord } = await supabase
-            .from("users")
-            .select("skip_tokens")
-            .eq("id", u.user_id)
-            .single();
-
-          await supabase
-            .from("users")
-            .update({ skip_tokens: (userRecord?.skip_tokens || 0) + 1 })
-            .eq("id", u.user_id);
-
-          await supabase
-            .from("skip_tokens")
-            .update({
-              used: false,
-              used_at: null,
-              used_for_meeting: null
-            })
-            .eq("user_id", u.user_id)
-            .eq("used_for_meeting", meeting_id);
-
-          await supabase
-            .from("point_logs")
-            .delete()
-            .eq("user_id", u.user_id)
-            .eq("meeting_id", meeting_id)
-            .eq("note", "Meeting attendance point (CIE Skip token applied)");
-        }
-
-        if (u.present === null) {
-          toDeleteUserIds.push(u.user_id);
-        } else {
-          toUpsert.push({
-            meeting_id,
-            user_id: u.user_id,
-            present: u.present,
-            used_skip_token: u.used_skip_token ?? false,
-            override_note: u.override_note || null,
-            marked_by: realAdminId,
-            marked_at: new Date().toISOString()
-          });
-        }
-      }
-
-      if (toUpsert.length > 0) {
-        const { error: upsertError } = await supabase
-          .from("attendance")
-          .upsert(toUpsert, { onConflict: "meeting_id, user_id" });
-
-        if (upsertError) {
-          return NextResponse.json({ error: upsertError.message }, { status: 500 });
-        }
-      }
-
-      if (toDeleteUserIds.length > 0) {
-        const { error: deleteError } = await supabase
-          .from("attendance")
-          .delete()
-          .eq("meeting_id", meeting_id)
-          .in("user_id", toDeleteUserIds);
-
-        if (deleteError) {
-          return NextResponse.json({ error: deleteError.message }, { status: 500 });
-        }
-      }
-
-      const { data: activeAttendance } = await supabase
-        .from("attendance")
-        .select("id")
-        .eq("meeting_id", meeting_id)
-        .eq("present", true);
-
-      const presentCount = activeAttendance?.length || 0;
-      await supabase
-        .from("meetings")
-        .update({ present_count: presentCount })
-        .eq("id", meeting_id);
-
-      return NextResponse.json({ success: true, count: toUpsert.length });
-    } catch (err: any) {
-      return NextResponse.json({ error: err.message || "Failed to process bulk save" }, { status: 500 });
-    }
+  if (saveUpdates.length === 0) {
+    return NextResponse.json({ error: "No attendance updates supplied" }, { status: 400 });
   }
 
-  if (!user_id) {
-    return NextResponse.json({ error: "Missing user_id" }, { status: 400 });
-  }
-
-  // --- Single Skip Token Ledger Audit Transitions ---
-  try {
-    const { data: existingAtt } = await supabase
-      .from("attendance")
-      .select("present, used_skip_token")
-      .eq("meeting_id", meeting_id)
-      .eq("user_id", user_id)
-      .maybeSingle();
-
-    const wasUsingSkip = existingAtt?.used_skip_token ?? false;
-    const isNowUsingSkip = used_skip_token === true;
-
-    if (!wasUsingSkip && isNowUsingSkip) {
-      const { data: userRecord } = await supabase
-        .from("users")
-        .select("skip_tokens, name")
-        .eq("id", user_id)
-        .single();
-
-      if (!userRecord || userRecord.skip_tokens <= 0) {
-        return NextResponse.json(
-          { error: `${userRecord?.name || "Student"} has no skip tokens available.` },
-          { status: 422 }
-        );
-      }
-
-      await supabase
-        .from("users")
-        .update({ skip_tokens: userRecord.skip_tokens - 1 })
-        .eq("id", user_id);
-
-      const { data: token } = await supabase
-        .from("skip_tokens")
-        .select("id")
-        .eq("user_id", user_id)
-        .eq("used", false)
-        .limit(1)
-        .maybeSingle();
-
-      if (token) {
-        await supabase
-          .from("skip_tokens")
-          .update({
-            used: true,
-            used_at: new Date().toISOString(),
-            used_for_meeting: meeting_id
-          })
-          .eq("id", token.id);
-      }
-
-      const { data: logRes } = await supabase
-        .from("point_logs")
-        .insert({
-          user_id,
-          points: 1,
-          redeemable_delta: 1,
-          lifetime_delta: 1,
-          type: "attendance",
-          note: `Meeting attendance point (CIE Skip token applied)`,
-          status: "pending",
-          meeting_id,
-          awarded_by: realAdminId
-        })
-        .select("id")
-        .single();
-
-      if (logRes) {
-        await supabase
-          .from("point_logs")
-          .update({
-            status: "confirmed",
-            reviewed_by: realAdminId,
-            reviewed_at: new Date().toISOString()
-          })
-          .eq("id", logRes.id);
-      }
-    } else if (wasUsingSkip && !isNowUsingSkip) {
-      const { data: userRecord } = await supabase
-        .from("users")
-        .select("skip_tokens")
-        .eq("id", user_id)
-        .single();
-
-      await supabase
-        .from("users")
-        .update({ skip_tokens: (userRecord?.skip_tokens || 0) + 1 })
-        .eq("id", user_id);
-
-      await supabase
-        .from("skip_tokens")
-        .update({
-          used: false,
-          used_at: null,
-          used_for_meeting: null
-        })
-        .eq("user_id", user_id)
-        .eq("used_for_meeting", meeting_id);
-
-      await supabase
-        .from("point_logs")
-        .delete()
-        .eq("user_id", user_id)
-        .eq("meeting_id", meeting_id)
-        .eq("note", "Meeting attendance point (CIE Skip token applied)");
-    }
-  } catch (err: any) {
-    console.error("Skip token transaction error:", err);
-  }
-
-  // Single member check-in / status update
-  const { data: log, error: upsertError } = await supabase
+  const targetUserIds = [...new Set(saveUpdates.map((update) => update.user_id).filter(Boolean))];
+  const { data: existingRows, error: existingError } = await supabase
     .from("attendance")
-    .upsert({
-      meeting_id,
-      user_id,
-      present: present ?? true,
-      used_skip_token: used_skip_token ?? false,
-      override_note: override_note || null,
-      marked_by: realAdminId,
-      marked_at: new Date().toISOString()
-    }, { onConflict: "meeting_id, user_id" })
-    .select()
-    .single();
-
-  if (upsertError) {
-    return NextResponse.json({ error: upsertError.message }, { status: 500 });
-  }
-
-  // Recalculate present count
-  const { data: activeAttendance } = await supabase
-    .from("attendance")
-    .select("id")
+    .select("user_id, present, used_skip_token, override_note")
     .eq("meeting_id", meeting_id)
-    .eq("present", true);
+    .in("user_id", targetUserIds);
 
-  const presentCount = activeAttendance?.length || 0;
-  await supabase
-    .from("meetings")
-    .update({ present_count: presentCount })
-    .eq("id", meeting_id);
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
 
-  return NextResponse.json({ data: log });
+  const existingByUser = new Map((existingRows || []).map((row) => [row.user_id, row]));
+  const rowsToInsert = [];
+  const attendanceLogs = [];
+  const conflicts = [];
+
+  for (const update of saveUpdates) {
+    if (!update.user_id || update.present === null) continue;
+
+    const cleanNote =
+      update.present === false && typeof update.override_note === "string" && update.override_note.trim().length > 0
+        ? update.override_note.trim()
+        : null;
+    const nextRow = {
+      present: update.present,
+      used_skip_token: update.used_skip_token === true,
+      override_note: cleanNote,
+    };
+    const existing = existingByUser.get(update.user_id);
+
+    if (existing) {
+      const existingNote = existing.present === false ? existing.override_note || null : null;
+      const changed =
+        existing.present !== nextRow.present ||
+        existing.used_skip_token !== nextRow.used_skip_token ||
+        existingNote !== nextRow.override_note;
+
+      if (changed) conflicts.push(update.user_id);
+      continue;
+    }
+
+    if (nextRow.used_skip_token) {
+      try {
+        await consumeSkipToken(supabase, update.user_id, meeting_id);
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 422 });
+      }
+    }
+
+    rowsToInsert.push({
+      meeting_id,
+      user_id: update.user_id,
+      ...nextRow,
+      marked_by: adminId,
+      marked_at: new Date().toISOString(),
+    });
+
+    if (nextRow.present === true || nextRow.used_skip_token) {
+      attendanceLogs.push({
+        user_id: update.user_id,
+        awarded_by: adminId,
+        meeting_id,
+        note: nextRow.used_skip_token
+          ? `Meeting attendance point (skip token): ${formatMeetingStamp(meeting)}`
+          : `Meeting attendance: ${formatMeetingStamp(meeting)}`,
+      });
+    }
+  }
+
+  if (conflicts.length > 0) {
+    return NextResponse.json(
+      { error: "Attendance is locked after saving. Existing marked rows cannot be changed." },
+      { status: 409 },
+    );
+  }
+
+  if (rowsToInsert.length > 0) {
+    const { error: insertError } = await supabase.from("attendance").insert(rowsToInsert);
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
+
+    try {
+      for (const logPayload of attendanceLogs) {
+        await confirmAttendancePointLog(supabase, logPayload);
+      }
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message || "Failed to create attendance logs" }, { status: 500 });
+    }
+  }
+
+  await refreshPresentCount(supabase, meeting_id);
+
+  return NextResponse.json({
+    success: true,
+    count: rowsToInsert.length,
+    locked: (existingRows || []).length,
+  });
 }

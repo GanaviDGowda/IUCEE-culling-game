@@ -41,7 +41,8 @@ export async function GET(request: Request) {
       { data: pendingAppeals },
       { data: pendingRequests },
       { data: recentPointLogs },
-      { data: recentNewUsers }
+      { data: recentNewUsers },
+      { data: currentSemester }
     ] = await Promise.all([
       // Active students count
       supabase.from("users").select("*", { count: "exact", head: true }).eq("role", "student").neq("status", "removed"),
@@ -56,13 +57,15 @@ export async function GET(request: Request) {
       // At risk members detailed data
       supabase.from("users").select("id, name, avatar_url, redeemable_pts, branch, year").eq("role", "student").eq("status", "danger_zone").limit(5),
       // Pending appeals detailed data
-      supabase.from("point_logs").select("id, points, type, note, appeal_note, appealed_at, user:users(id, name, email)").eq("appeal_status", "pending").limit(5),
+      supabase.from("point_logs").select("id, points, type, note, appeal_note, appealed_at, user:users!point_logs_user_id_fkey(id, name, email)").eq("appeal_status", "pending").limit(5),
       // Pending registrations
       supabase.from("registration_requests").select("id, name, email, role, branch, year, created_at").eq("status", "pending").limit(10),
       // Recent point logs for activity feed
-      supabase.from("point_logs").select("id, points, type, note, created_at, user:users(name, avatar_url, tier)").eq("status", "confirmed").order("created_at", { ascending: false }).limit(10),
+      supabase.from("point_logs").select("id, points, type, note, created_at, user:users!point_logs_user_id_fkey(name, avatar_url, tier)").eq("status", "confirmed").order("created_at", { ascending: false }).limit(10),
       // Recent new members for activity feed
-      supabase.from("users").select("id, name, avatar_url, tier, created_at").eq("role", "student").neq("status", "removed").order("created_at", { ascending: false }).limit(5)
+      supabase.from("users").select("id, name, avatar_url, tier, created_at").eq("role", "student").neq("status", "removed").order("created_at", { ascending: false }).limit(5),
+      // Current admin-set semester
+      supabase.from("quarters").select("label").or("is_current.eq.true,is_active.eq.true").order("created_at", { ascending: false }).limit(1).maybeSingle()
     ]);
 
     // Calculate attendance rate percentage
@@ -72,13 +75,6 @@ export async function GET(request: Request) {
     const attendanceRate = totalStudents > 0 && totalMeetings > 0
       ? Math.min(Math.round((totalAttendance / (totalStudents * totalMeetings)) * 100), 100)
       : 85; // Default high fidelity fallback
-
-    // Calculate current quarter
-    const month = new Date().getMonth();
-    let currentQuarter = "Q1";
-    if (month >= 3 && month <= 5) currentQuarter = "Q2";
-    else if (month >= 6 && month <= 8) currentQuarter = "Q3";
-    else if (month >= 9 && month <= 11) currentQuarter = "Q4";
 
     // 2. Build live unified activity feed sorted chronologically
     const activities: any[] = [];
@@ -118,7 +114,7 @@ export async function GET(request: Request) {
         danger_zone: dangerCount || 0,
         attendance_rate: attendanceRate,
         open_appeals: openAppealsCount || 0,
-        current_quarter: currentQuarter
+        current_quarter: currentSemester?.label || "No semester set"
       },
       alerts: {
         at_risk_members: atRiskMembers || [],

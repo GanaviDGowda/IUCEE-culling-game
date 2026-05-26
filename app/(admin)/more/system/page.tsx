@@ -31,6 +31,14 @@ export default function AdminSystemDashboard() {
   const [newQCurrent, setNewQCurrent] = useState(false);
   const [addingQ, setAddingQ] = useState(false);
 
+  // Editing states for semesters
+  const [editingQuarterId, setEditingQuarterId] = useState<string | null>(null);
+  const [editQLabel, setEditQLabel] = useState("");
+  const [editQStart, setEditQStart] = useState("");
+  const [editQEnd, setEditQEnd] = useState("");
+  const [updatingQ, setUpdatingQ] = useState(false);
+  const [closingQ, setClosingQ] = useState(false);
+
   // Form States - Holidays
   const [newHTitle, setNewHTitle] = useState("");
   const [newHDate, setNewHDate] = useState("");
@@ -95,6 +103,24 @@ export default function AdminSystemDashboard() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Auto-populate 6-month default dates for a semester
+  useEffect(() => {
+    const today = new Date();
+    const startStr = today.toISOString().split("T")[0];
+    
+    const end = new Date(today);
+    end.setMonth(today.getMonth() + 6);
+    const endStr = end.toISOString().split("T")[0];
+    
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    const defaultLabel = month <= 6 ? `${year}-Sem1` : `${year}-Sem2`;
+    
+    setNewQStart(startStr);
+    setNewQEnd(endStr);
+    setNewQLabel(defaultLabel);
   }, []);
 
   useEffect(() => {
@@ -283,6 +309,73 @@ export default function AdminSystemDashboard() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Handler - Start editing semester/quarter
+  const startEditQuarter = (q: any) => {
+    setEditingQuarterId(q.id);
+    setEditQLabel(q.label);
+    setEditQStart(q.start_date.split("T")[0]);
+    setEditQEnd(q.end_date.split("T")[0]);
+  };
+
+  // Handler - Update semester/quarter dates
+  const handleUpdateQuarter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingQuarterId || !editQLabel || !editQStart || !editQEnd) return;
+    setUpdatingQ(true);
+    try {
+      const res = await fetch("/api/admin/system", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_quarter_dates",
+          id: editingQuarterId,
+          label: editQLabel,
+          start_date: editQStart,
+          end_date: editQEnd
+        })
+      });
+      if (res.ok) {
+        setEditingQuarterId(null);
+        await fetchSystemData();
+        alert("Semester timeline successfully adjusted.");
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to update semester.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUpdatingQ(false);
+    }
+  };
+
+  // Handler - End semester/quarter early
+  const handleEndQuarterEarly = async (qid: string) => {
+    if (!confirm("Are you sure you want to end this semester early? This will calculate final student tiers, archive this semester, and reset current semester points for active students.")) return;
+    setClosingQ(true);
+    try {
+      const res = await fetch("/api/admin/system", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "end_quarter_early",
+          id: qid
+        })
+      });
+      if (res.ok) {
+        await fetchSystemData();
+        alert("Semester successfully finalized and archived. Active tiers have been updated.");
+      } else {
+        const err = await res.json();
+        alert(err.error || "Failed to finalize semester.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setClosingQ(false);
     }
   };
 
@@ -552,23 +645,23 @@ export default function AdminSystemDashboard() {
       )}
 
       {/* ────────────────────────────────────────────────────────
-          TAB 2: QUARTER EVALUATION PERIODS
+          TAB 2: SEMESTER EVALUATION PERIODS
           ──────────────────────────────────────────────────────── */}
       {activeTab === "quarter" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* Create Quarter form */}
+          {/* Create Semester form */}
           <form onSubmit={handleAddQuarter} className="lg:col-span-4 space-y-4 bg-zinc-900/10 border border-zinc-850 p-5 rounded-2xl">
             <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading border-b border-zinc-900 pb-2.5">
-              Provision New Quarter
+              Provision New Semester
             </h3>
 
             <div className="space-y-3.5 pt-1">
               <div className="space-y-1">
-                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Quarter Label</label>
+                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Semester Label</label>
                 <input 
                   type="text" 
-                  placeholder="e.g. 2026-Q2"
+                  placeholder="e.g. 2026-Sem1"
                   value={newQLabel}
                   onChange={(e) => setNewQLabel(e.target.value)}
                   className="w-full h-9 bg-zinc-950 border border-zinc-850 focus:border-red-500/50 rounded-xl px-3 text-xs text-white focus:outline-none transition-colors"
@@ -618,7 +711,7 @@ export default function AdminSystemDashboard() {
                   className="w-full h-8 rounded-xl text-xs font-black bg-red-600 hover:bg-red-500 text-white flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <RiAddCircleLine className="w-4 h-4" />
-                  {addingQ ? "Provisioning..." : "Provision Evaluation Quarter"}
+                  {addingQ ? "Provisioning..." : "Provision Semester / Quarter"}
                 </Button>
               </div>
             </div>
@@ -635,44 +728,116 @@ export default function AdminSystemDashboard() {
             ) : (
               <div className="divide-y divide-zinc-900">
                 {quarters.map((q: any) => (
-                  <div key={q.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-black text-white font-mono">{q.label}</h4>
-                        {q.is_current && (
-                          <Badge className="bg-red-955 text-red-400 border border-red-900/30 text-[7px] font-black uppercase tracking-widest py-0.5">
-                            ACTIVE CURRENT
-                          </Badge>
-                        )}
-                        {q.is_archived && (
-                          <Badge className="bg-zinc-900 text-zinc-500 border border-zinc-800 text-[7px] font-black uppercase tracking-widest py-0.5">
-                            ARCHIVED
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-[9px] text-zinc-500 font-mono font-bold uppercase">
-                        Timeline: {new Date(q.start_date).toLocaleDateString()} — {new Date(q.end_date).toLocaleDateString()}
-                      </p>
-                    </div>
+                  <div key={q.id} className="py-3.5 flex flex-col gap-4 border-b border-zinc-900/40 last:border-0">
+                    {editingQuarterId === q.id ? (
+                      <form onSubmit={handleUpdateQuarter} className="space-y-3.5 w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-wider font-heading">Semester Label</label>
+                            <input 
+                              type="text" 
+                              value={editQLabel}
+                              onChange={(e) => setEditQLabel(e.target.value)}
+                              className="w-full h-8 bg-zinc-950 border border-zinc-850 rounded-lg px-2 text-xs text-white focus:outline-none"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-wider font-heading">Start Date</label>
+                            <input 
+                              type="date" 
+                              value={editQStart}
+                              onChange={(e) => setEditQStart(e.target.value)}
+                              className="w-full h-8 bg-zinc-950 border border-zinc-850 rounded-lg px-2 text-xs text-white focus:outline-none"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-black text-zinc-500 uppercase tracking-wider font-heading">End Date</label>
+                            <input 
+                              type="date" 
+                              value={editQEnd}
+                              onChange={(e) => setEditQEnd(e.target.value)}
+                              className="w-full h-8 bg-zinc-950 border border-zinc-850 rounded-lg px-2 text-xs text-white focus:outline-none"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setEditingQuarterId(null)}
+                            className="h-7 px-3 rounded-lg border border-zinc-800 text-[9px] font-black text-zinc-400 hover:text-white uppercase tracking-wider font-heading transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={updatingQ}
+                            className="h-7 px-3 rounded-lg bg-red-600 hover:bg-red-500 text-[9px] font-black text-white uppercase tracking-wider font-heading transition-colors"
+                          >
+                            {updatingQ ? "Saving..." : "Save Changes"}
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-black text-white font-mono">{q.label}</h4>
+                            {q.is_current && (
+                              <Badge className="bg-red-955 text-red-400 border border-red-900/30 text-[7px] font-black uppercase tracking-widest py-0.5">
+                                ACTIVE CURRENT
+                              </Badge>
+                            )}
+                            {q.is_archived && (
+                              <Badge className="bg-zinc-900 text-zinc-500 border border-zinc-800 text-[7px] font-black uppercase tracking-widest py-0.5">
+                                ARCHIVED
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-zinc-500 font-mono font-bold uppercase">
+                            Timeline: {new Date(q.start_date).toLocaleDateString()} — {new Date(q.end_date).toLocaleDateString()}
+                          </p>
+                        </div>
 
-                    <div className="flex items-center gap-2">
-                      {!q.is_current && !q.is_archived && (
-                        <button
-                          onClick={() => handleSetCurrentQuarter(q.id)}
-                          className="h-7 px-3 rounded-lg border border-red-900/40 text-[9px] font-black text-red-400 hover:bg-red-955 uppercase tracking-wider font-heading transition-colors"
-                        >
-                          Activate
-                        </button>
-                      )}
-                      {!q.is_archived && (
-                        <button
-                          onClick={() => handleArchiveQuarter(q.id)}
-                          className="h-7 px-3 rounded-lg border border-zinc-800 hover:border-red-500/50 text-[9px] font-black text-zinc-400 hover:text-red-400 uppercase tracking-wider font-heading transition-colors"
-                        >
-                          Archive Period
-                        </button>
-                      )}
-                    </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {q.is_current && !q.is_archived && (
+                            <>
+                              <button
+                                onClick={() => startEditQuarter(q)}
+                                className="h-7 px-3 rounded-lg border border-zinc-800 hover:border-zinc-700 text-[9px] font-black text-zinc-400 hover:text-white uppercase tracking-wider font-heading transition-colors"
+                              >
+                                Edit Dates
+                              </button>
+                              <button
+                                onClick={() => handleEndQuarterEarly(q.id)}
+                                disabled={closingQ}
+                                className="h-7 px-3 rounded-lg border border-amber-900/40 text-[9px] font-black text-amber-400 hover:bg-amber-955 uppercase tracking-wider font-heading transition-colors"
+                              >
+                                {closingQ ? "Closing..." : "End Sem Early"}
+                              </button>
+                            </>
+                          )}
+                          {!q.is_current && !q.is_archived && (
+                            <button
+                              onClick={() => handleSetCurrentQuarter(q.id)}
+                              className="h-7 px-3 rounded-lg border border-red-900/40 text-[9px] font-black text-red-400 hover:bg-red-955 uppercase tracking-wider font-heading transition-colors"
+                            >
+                              Activate
+                            </button>
+                          )}
+                          {!q.is_archived && (
+                            <button
+                              onClick={() => handleArchiveQuarter(q.id)}
+                              className="h-7 px-3 rounded-lg border border-zinc-800 hover:border-red-500/50 text-[9px] font-black text-zinc-400 hover:text-red-400 uppercase tracking-wider font-heading transition-colors"
+                            >
+                              Archive Period
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

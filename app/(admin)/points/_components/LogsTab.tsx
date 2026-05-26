@@ -20,6 +20,7 @@ interface PointLog {
   created_at: string;
   user?: { name?: string | null };
   users?: { name?: string | null };
+  meeting?: { title?: string | null; date?: string | null; time?: string | null; location?: string | null };
 }
 
 export function LogsTab() {
@@ -66,14 +67,17 @@ export function LogsTab() {
     if (filteredLogs.length === 0) return;
     
     // Construct CSV content
-    const csvHeaders = "Name,Activity Type,Points Delta,Timestamp,Attached Note\n";
+    const csvHeaders = "Name,Activity Type,Points Delta,Timestamp,Meeting Date,Meeting Time,Venue,Attached Note\n";
     const csvRows = filteredLogs.map(log => {
       const name = `"${(log.user?.name || log.users?.name || "Unknown").replace(/"/g, '""')}"`;
       const type = `"${formatPointType(log.type)}"`;
       const points = log.points;
       const timestamp = `"${new Date(log.created_at).toLocaleString()}"`;
+      const meetingDate = `"${formatMeetingDate(log.meeting?.date)}"`;
+      const meetingTime = `"${formatMeetingTime(log.meeting?.time)}"`;
+      const venue = `"${(log.meeting?.location || "").replace(/"/g, '""')}"`;
       const note = `"${(log.note || "").replace(/"/g, '""')}"`;
-      return `${name},${type},${points},${timestamp},${note}`;
+      return `${name},${type},${points},${timestamp},${meetingDate},${meetingTime},${venue},${note}`;
     }).join("\n");
 
     const blob = new Blob([csvHeaders + csvRows], { type: "text/csv;charset=utf-8;" });
@@ -85,6 +89,17 @@ export function LogsTab() {
     link.click();
     document.body.removeChild(link);
   };
+
+  const formatMeetingDate = (date?: string | null) => {
+    if (!date) return "";
+    return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+  };
+
+  const formatMeetingTime = (time?: string | null) => time ? String(time).slice(0, 5) : "";
 
   return (
     <div className="space-y-4">
@@ -178,6 +193,11 @@ export function LogsTab() {
                     <span className="text-[8px] text-zinc-600 block mt-0.5">
                       {new Date(log.created_at).toLocaleString()}
                     </span>
+                    {log.meeting && (
+                      <span className="text-[8px] text-zinc-500 block mt-0.5">
+                        {log.meeting.title || "Meeting"} • {formatMeetingDate(log.meeting.date)} • {formatMeetingTime(log.meeting.time)} • {log.meeting.location || "Remote"}
+                      </span>
+                    )}
                   </div>
                 </div>
 

@@ -17,17 +17,17 @@ export default async function AdminLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-black text-zinc-100">
+    <div className="flex h-screen overflow-hidden bg-black text-zinc-100">
       <Sidebar profile={profile} />
-      <div className="flex-1 flex flex-col md:pl-64 pb-14 md:pb-0">
-        <main className="flex-1 w-full max-w-md md:max-w-5xl mx-auto flex flex-col">
+      <div className="flex-1 flex flex-col pb-14 md:pb-0 h-full overflow-hidden">
+        <main className="flex-1 w-full md:max-w-5xl md:mx-auto flex flex-col h-full overflow-hidden">
           <AdminHeader />
-          <div className="flex-1">
+          <div className="flex-1 overflow-y-auto min-h-0 scrollbar-none">
             {children}
           </div>
         </main>
-        <BottomNav />
       </div>
+      <BottomNav />
     </div>
   );
 }

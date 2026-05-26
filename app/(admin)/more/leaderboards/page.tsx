@@ -19,12 +19,12 @@ import {
 } from "@remixicon/react";
 
 type TopTab = "main" | "domain" | "distribution";
-type MainPeriod = "all_time" | "quarterly" | "monthly" | "rising";
+type MainPeriod = "ranking" | "bos";
 type DomainType = "tech" | "innovation" | "projects" | "leadership" | "creative";
 
 export default function AdminLeaderboardsDashboard() {
   const [activeTab, setActiveTab] = useState<TopTab>("main");
-  const [period, setPeriod] = useState<MainPeriod>("all_time");
+  const [period, setPeriod] = useState<MainPeriod>("ranking");
   const [domain, setDomain] = useState<DomainType>("tech");
   
   const [data, setData] = useState<any>(null);
@@ -174,7 +174,7 @@ export default function AdminLeaderboardsDashboard() {
           
           {/* Period Selection Controls */}
           <div className="flex gap-1 bg-zinc-900/10 border border-zinc-850 p-1 rounded-xl max-w-md">
-            {(["all_time", "quarterly", "monthly", "rising"] as MainPeriod[]).map((p) => (
+            {(["ranking", "bos"] as MainPeriod[]).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
@@ -184,7 +184,7 @@ export default function AdminLeaderboardsDashboard() {
                     : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
-                {p.replace("_", " ")}
+                {p === "ranking" ? "Main" : "BOS"}
               </button>
             ))}
           </div>
@@ -215,16 +215,22 @@ export default function AdminLeaderboardsDashboard() {
                           <span>{student.branch} Y{student.year}</span>
                           <span>•</span>
                           <span className="capitalize">{student.tier || "Active"}</span>
+                          {period === "ranking" && student.fast_rising ? (
+                            <>
+                              <span>•</span>
+                              <span className="text-emerald-400">Fast rising</span>
+                            </>
+                          ) : null}
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right shrink-0">
                       <p className="text-sm font-black text-white font-mono leading-none">
-                        {period === "all_time" ? student.lifetime_pts : student.period_pts}
+                        {period === "bos" ? student.lifetime_pts : student.redeemable_pts}
                       </p>
                       <p className="text-[8px] font-black uppercase text-zinc-550 font-mono mt-0.5 tracking-wider">
-                        {period === "all_time" ? "Lifetime Pts" : "Period Pts"}
+                        {period === "bos" ? "Lifetime Pts" : "Active Pts"}
                       </p>
                     </div>
                   </div>
@@ -323,33 +329,98 @@ export default function AdminLeaderboardsDashboard() {
           {/* Left Column: Tiers and Century users */}
           <div className="space-y-4">
             
-            {/* Tiers Distribution Bar Chart */}
+            {/* Tiers Distribution Donut Chart */}
             <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-4">
               <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1 border-b border-zinc-900 pb-2">
-                <RiPieChartLine className="w-4 h-4" />
+                <RiPieChartLine className="w-4 h-4 text-red-500" />
                 Tier Distribution
               </h3>
 
-              <div className="space-y-3.5 pt-1">
-                {[
-                  { key: "century", label: "Century Tier", color: "bg-red-500" },
-                  { key: "domain_master", label: "Domain Master", color: "bg-purple-500" },
-                  { key: "elite", label: "Elite Members", color: "bg-blue-500" },
-                  { key: "contributor", label: "Contributors", color: "bg-amber-500" },
-                  { key: "active", label: "Active Status", color: "bg-zinc-500" },
-                ].map((tier) => (
-                  <div key={tier.key} className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-heading">
-                      {tier.label}
-                    </span>
-                    {renderProgressBar(
-                      distribution.tiers?.[tier.key] || 0,
-                      distribution.total_students || 1,
-                      tier.color
-                    )}
+              {(() => {
+                const tiersList = [
+                  { key: "century", label: "Century Tier", color: "#EF4444" },
+                  { key: "domain_master", label: "Domain Master", color: "#8B5CF6" },
+                  { key: "elite", label: "Elite Members", color: "#3B82F6" },
+                  { key: "contributor", label: "Contributors", color: "#F59E0B" },
+                  { key: "active", label: "Active Status", color: "#10B981" },
+                ];
+                const totalTierStudents = distribution.total_students || 0;
+                let accumulatedPercentage = 0;
+                
+                const segments = tiersList.map((t) => {
+                  const val = distribution.tiers?.[t.key] || 0;
+                  const percentage = totalTierStudents > 0 ? (val / totalTierStudents) * 100 : 0;
+                  const dashArray = 251.327;
+                  const dashOffset = dashArray - (percentage / 100) * dashArray;
+                  const rotation = (accumulatedPercentage / 100) * 360;
+                  accumulatedPercentage += percentage;
+                  return {
+                    name: t.label,
+                    value: val,
+                    percentage,
+                    dashOffset,
+                    rotation,
+                    color: t.color
+                  };
+                }).filter(item => item.value > 0);
+
+                return totalTierStudents === 0 ? (
+                  <p className="text-center text-zinc-555 italic py-10 text-xs">No distribution data indexed.</p>
+                ) : (
+                  <div className="space-y-4 pt-1">
+                    <div className="relative flex items-center justify-center">
+                      <svg width="140" height="140" viewBox="0 0 120 120" className="overflow-visible">
+                        {/* Background track circle */}
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="40"
+                          fill="transparent"
+                          stroke="rgba(255,255,255,0.03)"
+                          strokeWidth="12"
+                        />
+                        
+                        {/* Segment Arcs */}
+                        {segments.map((seg: any, idx: number) => (
+                          <circle
+                            key={idx}
+                            cx="60"
+                            cy="60"
+                            r="40"
+                            fill="transparent"
+                            stroke={seg.color}
+                            strokeWidth="10"
+                            strokeDasharray="251.327"
+                            strokeDashoffset={seg.dashOffset}
+                            transform={`rotate(${seg.rotation - 90} 60 60)`}
+                            className="transition-all duration-300 hover:stroke-[12px] cursor-pointer"
+                          />
+                        ))}
+
+                        {/* Donut Center Hole text */}
+                        <circle cx="60" cy="60" r="30" className="fill-zinc-950/80" />
+                        <text x="60" y="58" textAnchor="middle" fill="#52525b" fontSize="6.5" fontWeight="bold" className="uppercase tracking-widest font-heading">Total</text>
+                        <text x="60" y="71" textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="black" className="font-mono">{totalTierStudents}</text>
+                      </svg>
+                    </div>
+
+                    {/* Legends */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2 text-[9px] font-heading font-black">
+                      {segments.map((seg: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between py-1 border-b border-zinc-900/50 px-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                            <span className="text-zinc-400 truncate uppercase tracking-wider text-[8.5px]">{seg.name}</span>
+                          </div>
+                          <span className="text-white font-mono text-[9px] shrink-0 ml-2">
+                            {seg.value} <span className="text-zinc-650 text-[8px] font-bold">({Math.round(seg.percentage)}%)</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
 
             {/* Century Users Callout */}
@@ -373,47 +444,175 @@ export default function AdminLeaderboardsDashboard() {
             {/* Branch Split */}
             <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-4">
               <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1 border-b border-zinc-900 pb-2">
-                <RiGroupLine className="w-4 h-4" />
+                <RiGroupLine className="w-4 h-4 text-teal-400" />
                 Branch Demographic Split
               </h3>
 
-              <div className="space-y-3.5 pt-1">
-                {Object.keys(distribution.branches || {}).length === 0 ? (
-                  <p className="text-[10px] text-zinc-555 italic">No branch data indexed.</p>
+              {(() => {
+                const branchColors: Record<string, string> = {
+                  CSE: "#3B82F6",
+                  ISE: "#8B5CF6",
+                  ECE: "#EF4444",
+                  ME: "#F59E0B",
+                  EEE: "#10B981"
+                };
+                const totalBranchStudents = distribution.total_students || 0;
+                let accumulatedPercentage = 0;
+                
+                const segments = Object.entries(distribution.branches || {}).map(([branch, count]: any) => {
+                  const percentage = totalBranchStudents > 0 ? (count / totalBranchStudents) * 100 : 0;
+                  const dashArray = 251.327;
+                  const dashOffset = dashArray - (percentage / 100) * dashArray;
+                  const rotation = (accumulatedPercentage / 100) * 360;
+                  accumulatedPercentage += percentage;
+                  return {
+                    name: `${branch} Dept`,
+                    value: count,
+                    percentage,
+                    dashOffset,
+                    rotation,
+                    color: branchColors[branch] || "#6B7280"
+                  };
+                }).filter(item => item.value > 0);
+
+                return totalBranchStudents === 0 ? (
+                  <p className="text-center text-zinc-555 italic py-10 text-xs">No branch data indexed.</p>
                 ) : (
-                  Object.entries(distribution.branches || {}).map(([branch, count]: any) => (
-                    <div key={branch} className="space-y-1">
-                      <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-heading">
-                        {branch} Department
-                      </span>
-                      {renderProgressBar(count, distribution.total_students || 1, "bg-teal-500")}
+                  <div className="space-y-4 pt-1">
+                    <div className="relative flex items-center justify-center">
+                      <svg width="140" height="140" viewBox="0 0 120 120" className="overflow-visible">
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="40"
+                          fill="transparent"
+                          stroke="rgba(255,255,255,0.03)"
+                          strokeWidth="12"
+                        />
+                        {segments.map((seg: any, idx: number) => (
+                          <circle
+                            key={idx}
+                            cx="60"
+                            cy="60"
+                            r="40"
+                            fill="transparent"
+                            stroke={seg.color}
+                            strokeWidth="10"
+                            strokeDasharray="251.327"
+                            strokeDashoffset={seg.dashOffset}
+                            transform={`rotate(${seg.rotation - 90} 60 60)`}
+                            className="transition-all duration-300 hover:stroke-[12px] cursor-pointer"
+                          />
+                        ))}
+                        <circle cx="60" cy="60" r="30" className="fill-zinc-950/80" />
+                        <text x="60" y="58" textAnchor="middle" fill="#52525b" fontSize="6.5" fontWeight="bold" className="uppercase tracking-widest font-heading">Total</text>
+                        <text x="60" y="71" textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="black" className="font-mono">{totalBranchStudents}</text>
+                      </svg>
                     </div>
-                  ))
-                )}
-              </div>
+                    {/* Legends */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2 text-[9px] font-heading font-black">
+                      {segments.map((seg: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between py-1 border-b border-zinc-900/50 px-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                            <span className="text-zinc-400 truncate uppercase tracking-wider text-[8.5px]">{seg.name}</span>
+                          </div>
+                          <span className="text-white font-mono text-[9px] shrink-0 ml-2">
+                            {seg.value} <span className="text-zinc-650 text-[8px] font-bold">({Math.round(seg.percentage)}%)</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Year Split */}
             <div className="bg-zinc-900/10 border border-zinc-850 p-4 rounded-2xl space-y-4">
               <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1 border-b border-zinc-900 pb-2">
-                <RiGroupLine className="w-4 h-4" />
+                <RiGroupLine className="w-4 h-4 text-blue-400" />
                 Academic Year split
               </h3>
 
-              <div className="space-y-3.5 pt-1">
-                {[1, 2, 3, 4].map((year) => (
-                  <div key={year} className="space-y-1">
-                    <span className="text-[9px] font-black uppercase text-zinc-500 tracking-wider font-heading">
-                      {year}st Year Students
-                    </span>
-                    {renderProgressBar(
-                      distribution.years?.[String(year)] || 0,
-                      distribution.total_students || 1,
-                      "bg-blue-500"
-                    )}
+              {(() => {
+                const yearColors: Record<string, string> = {
+                  "1": "#3B82F6",
+                  "2": "#8B5CF6",
+                  "3": "#F59E0B",
+                  "4": "#EF4444"
+                };
+                const totalYearStudents = distribution.total_students || 0;
+                let accumulatedPercentage = 0;
+                
+                const segments = [1, 2, 3, 4].map((year) => {
+                  const count = distribution.years?.[String(year)] || 0;
+                  const percentage = totalYearStudents > 0 ? (count / totalYearStudents) * 100 : 0;
+                  const dashArray = 251.327;
+                  const dashOffset = dashArray - (percentage / 100) * dashArray;
+                  const rotation = (accumulatedPercentage / 100) * 360;
+                  accumulatedPercentage += percentage;
+                  return {
+                    name: `${year}st Year`,
+                    value: count,
+                    percentage,
+                    dashOffset,
+                    rotation,
+                    color: yearColors[String(year)] || "#6B7280"
+                  };
+                }).filter(item => item.value > 0);
+
+                return totalYearStudents === 0 ? (
+                  <p className="text-center text-zinc-555 italic py-10 text-xs">No year data indexed.</p>
+                ) : (
+                  <div className="space-y-4 pt-1">
+                    <div className="relative flex items-center justify-center">
+                      <svg width="140" height="140" viewBox="0 0 120 120" className="overflow-visible">
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="40"
+                          fill="transparent"
+                          stroke="rgba(255,255,255,0.03)"
+                          strokeWidth="12"
+                        />
+                        {segments.map((seg: any, idx: number) => (
+                          <circle
+                            key={idx}
+                            cx="60"
+                            cy="60"
+                            r="40"
+                            fill="transparent"
+                            stroke={seg.color}
+                            strokeWidth="10"
+                            strokeDasharray="251.327"
+                            strokeDashoffset={seg.dashOffset}
+                            transform={`rotate(${seg.rotation - 90} 60 60)`}
+                            className="transition-all duration-300 hover:stroke-[12px] cursor-pointer"
+                          />
+                        ))}
+                        <circle cx="60" cy="60" r="30" className="fill-zinc-950/80" />
+                        <text x="60" y="58" textAnchor="middle" fill="#52525b" fontSize="6.5" fontWeight="bold" className="uppercase tracking-widest font-heading">Total</text>
+                        <text x="60" y="71" textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="black" className="font-mono">{totalYearStudents}</text>
+                      </svg>
+                    </div>
+                    {/* Legends */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2 text-[9px] font-heading font-black">
+                      {segments.map((seg: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between py-1 border-b border-zinc-900/50 px-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                            <span className="text-zinc-400 truncate uppercase tracking-wider text-[8.5px]">{seg.name}</span>
+                          </div>
+                          <span className="text-white font-mono text-[9px] shrink-0 ml-2">
+                            {seg.value} <span className="text-zinc-650 text-[8px] font-bold">({Math.round(seg.percentage)}%)</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
 
           </div>

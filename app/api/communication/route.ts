@@ -95,6 +95,8 @@ export async function POST(req: Request) {
 
     if (target === "branch" && targetValue) {
       recipientsQuery = recipientsQuery.eq("branch", targetValue);
+    } else if (target === "year" && targetValue) {
+      recipientsQuery = recipientsQuery.eq("year", targetValue);
     } else if (target === "tier" && targetValue) {
       recipientsQuery = recipientsQuery.eq("tier", targetValue);
     } else if (target === "individual" && targetValue) {

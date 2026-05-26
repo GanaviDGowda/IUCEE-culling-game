@@ -47,7 +47,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       { data: updates }
     ] = await Promise.all([
       supabase.from("project_collaborators").select("user:users(id, name, email, avatar_url, branch, year)").eq("project_id", id),
-      supabase.from("project_updates").select("*, user:users(id, name)").eq("project_id", id).order("submitted_at", { ascending: false })
+      supabase.from("project_updates").select("*, user:users!project_updates_user_id_fkey(id, name)").eq("project_id", id).order("submitted_at", { ascending: false })
     ]);
 
     return NextResponse.json({
@@ -118,12 +118,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           note: `Approved weekly update for project milestone`
         });
 
-      // Update submitter's points
-      await supabase.rpc("increment_user_points", {
-        target_user_id: update.user_id,
-        redeemable_pts_delta: 1,
-        lifetime_pts_delta: 1
-      });
+      if (pointErr) {
+        return NextResponse.json({ error: pointErr.message }, { status: 500 });
+      }
 
       return NextResponse.json({ success: true, message: "Weekly update approved, 1 point awarded." });
     }
@@ -177,7 +174,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       // Award 5 points for Project Funding Claim to owner
-      await supabase
+      const { error: pointErr } = await supabase
         .from("point_logs")
         .insert({
           user_id: project.owner_id,
@@ -191,12 +188,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           note: `Approved funding claim reward for project`
         });
 
-      // Update owner's points
-      await supabase.rpc("increment_user_points", {
-        target_user_id: project.owner_id,
-        redeemable_pts_delta: 5,
-        lifetime_pts_delta: 5
-      });
+      if (pointErr) {
+        return NextResponse.json({ error: pointErr.message }, { status: 500 });
+      }
 
       return NextResponse.json({ success: true, message: "Funding claim approved, 5 points awarded." });
     }

@@ -84,10 +84,10 @@ export default function AdminAnalyticsDashboard() {
       </div>
 
       {/* Top Navigation Tabs */}
-      <div className="flex border-b border-zinc-900 gap-1.5 pb-2">
+      <div className="flex border-b border-zinc-900 gap-1.5 pb-2 overflow-x-auto whitespace-nowrap scrollbar-none">
         <button
           onClick={() => setActiveTab("engagement")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors shrink-0 ${
             activeTab === "engagement" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -97,7 +97,7 @@ export default function AdminAnalyticsDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("attendance")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors shrink-0 ${
             activeTab === "attendance" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -107,7 +107,7 @@ export default function AdminAnalyticsDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("demographics")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors shrink-0 ${
             activeTab === "demographics" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -117,7 +117,7 @@ export default function AdminAnalyticsDashboard() {
         </button>
         <button
           onClick={() => setActiveTab("bos")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-heading font-black uppercase tracking-wider transition-colors shrink-0 ${
             activeTab === "bos" 
               ? "bg-red-500/10 text-red-400 border border-red-900/20" 
               : "text-zinc-500 hover:text-zinc-300 border border-transparent"
@@ -386,100 +386,249 @@ export default function AdminAnalyticsDashboard() {
       {/* ────────────────────────────────────────────────────────
           TAB 3: BRANCH & YEAR
           ──────────────────────────────────────────────────────── */}
-      {activeTab === "demographics" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-          
-          {/* Branch Performance Comparison */}
-          <div className="p-4 bg-zinc-900/10 border border-zinc-850 rounded-2xl space-y-4">
-            <div>
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1">
-                <RiFolderChartLine className="w-4 h-4 text-purple-400" />
-                Branch Point Comparisons
-              </h3>
-              <p className="text-[9px] text-zinc-550 font-medium uppercase mt-0.5">
-                Average lifetime points aggregated per department split
-              </p>
+      {activeTab === "demographics" && (() => {
+        const tierDistribution = demographics.tierDistribution || [];
+        const totalTierStudents = tierDistribution.reduce((sum: number, t: any) => sum + t.value, 0);
+        let accumulatedPercentage = 0;
+        
+        const segments = tierDistribution.map((t: any) => {
+          const percentage = totalTierStudents > 0 ? (t.value / totalTierStudents) * 100 : 0;
+          const dashArray = 251.327;
+          const dashOffset = dashArray - (percentage / 100) * dashArray;
+          const rotation = (accumulatedPercentage / 100) * 360;
+          accumulatedPercentage += percentage;
+          return {
+            name: t.name,
+            value: t.value,
+            percentage,
+            dashOffset,
+            rotation,
+            color: t.color
+          };
+        });
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+            
+            {/* Branch Performance Comparison */}
+            <div className="p-4 bg-zinc-900/10 border border-zinc-850 rounded-2xl space-y-4">
+              <div>
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1">
+                  <RiFolderChartLine className="w-4 h-4 text-purple-400" />
+                  Branch Point Comparisons
+                </h3>
+                <p className="text-[9px] text-zinc-550 font-medium uppercase mt-0.5">
+                  Average lifetime points aggregated per department split
+                </p>
+              </div>
+
+              {branchComparison.length === 0 ? (
+                <p className="text-center text-zinc-555 italic py-10 text-xs">No branch distributions indexed.</p>
+              ) : (
+                <div className="pt-2">
+                  <svg className="w-full h-48 overflow-visible" viewBox="0 0 400 180">
+                    <defs>
+                      <linearGradient id="branchBarGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#EF4444" />
+                        <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.8" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Horizontal gridlines */}
+                    <line x1="25" y1="20" x2="390" y2="20" stroke="rgba(255,255,255,0.03)" strokeDasharray="3" />
+                    <line x1="25" y1="60" x2="390" y2="60" stroke="rgba(255,255,255,0.03)" strokeDasharray="3" />
+                    <line x1="25" y1="100" x2="390" y2="100" stroke="rgba(255,255,255,0.03)" strokeDasharray="3" />
+                    <line x1="25" y1="140" x2="390" y2="140" stroke="rgba(255,255,255,0.1)" />
+
+                    {(() => {
+                      const maxPoints = Math.max(...branchComparison.map((i: any) => i.averagePoints), 10);
+                      const spacing = (390 - 25) / branchComparison.length;
+                      const barWidth = 30;
+
+                      return branchComparison.map((item: any, idx: number) => {
+                        const barHeight = maxPoints > 0 ? (item.averagePoints / maxPoints) * 110 : 0;
+                        const x = 25 + idx * spacing + (spacing - barWidth) / 2;
+                        const y = 140 - barHeight;
+
+                        return (
+                          <g key={item.branch} className="group cursor-pointer">
+                            {/* Bar rect */}
+                            <rect
+                              x={x}
+                              y={y}
+                              width={barWidth}
+                              height={barHeight}
+                              fill="url(#branchBarGrad)"
+                              rx="4"
+                              className="transition-all duration-300 group-hover:opacity-85"
+                            />
+
+                            {/* Value label on top of bar */}
+                            <text
+                              x={x + barWidth / 2}
+                              y={y - 8}
+                              fill="#ffffff"
+                              fontSize="8.5"
+                              fontWeight="black"
+                              textAnchor="middle"
+                              className="font-mono opacity-80 group-hover:opacity-100 transition-opacity"
+                            >
+                              {item.averagePoints}
+                            </text>
+
+                            {/* Branch label below chart */}
+                            <text
+                              x={x + barWidth / 2}
+                              y="154"
+                              fill="#a1a1aa"
+                              fontSize="9"
+                              fontWeight="black"
+                              textAnchor="middle"
+                              className="font-heading uppercase tracking-wider"
+                            >
+                              {item.branch}
+                            </text>
+
+                            {/* Student count below branch */}
+                            <text
+                              x={x + barWidth / 2}
+                              y="166"
+                              fill="#52525b"
+                              fontSize="7.5"
+                              fontWeight="bold"
+                              textAnchor="middle"
+                              className="font-heading uppercase"
+                            >
+                              {item.students} Mem
+                            </text>
+                          </g>
+                        );
+                      });
+                    })()}
+                  </svg>
+                </div>
+              )}
             </div>
 
-            {branchComparison.length === 0 ? (
-              <p className="text-center text-zinc-550 italic py-10 text-xs">No branch distributions indexed.</p>
-            ) : (
-              <div className="space-y-4 pt-2">
-                {branchComparison.map((item: any) => {
-                  const maxPoints = Math.max(...branchComparison.map((i: any) => i.averagePoints), 10);
-                  const pct = Math.round((item.averagePoints / maxPoints) * 100);
-                  
-                  return (
-                    <div key={item.branch} className="space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase font-heading">
-                        <span>{item.branch} Department</span>
-                        <span className="font-mono">{item.averagePoints} Avg Pts</span>
-                      </div>
-                      
-                      <div className="h-2.5 w-full bg-zinc-950 border border-zinc-900 rounded-lg overflow-hidden">
-                        <div 
-                          className="h-full rounded-lg bg-gradient-to-r from-red-600 to-purple-600 transition-all duration-700"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <p className="text-[8px] text-zinc-650 font-black uppercase font-heading">
-                        {item.students} members registered
+            {/* Academic Cohort view */}
+            <div className="p-4 bg-zinc-900/10 border border-zinc-850 rounded-2xl space-y-4">
+              <div>
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1">
+                  <RiGroupLine className="w-4 h-4 text-blue-400" />
+                  Academic Cohort Matrices
+                </h3>
+                <p className="text-[9px] text-zinc-550 font-medium uppercase mt-0.5">
+                  Comparative averages across student engineering batches
+                </p>
+              </div>
+
+              <div className="divide-y divide-zinc-900">
+                {cohortView.map((item: any) => (
+                  <div key={item.year} className="py-3 flex items-center justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <h4 className="text-xs font-black text-white font-heading">{item.year}</h4>
+                      <p className="text-[9px] text-zinc-550 font-bold uppercase">
+                        {item.count} registered scholars
                       </p>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
-          {/* Academic Cohort view */}
-          <div className="p-4 bg-zinc-900/10 border border-zinc-850 rounded-2xl space-y-4">
-            <div>
-              <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1">
-                <RiGroupLine className="w-4 h-4 text-blue-400" />
-                Academic Cohort Matrices
-              </h3>
-              <p className="text-[9px] text-zinc-550 font-medium uppercase mt-0.5">
-                Comparative averages across student engineering batches
-              </p>
+                    <div className="flex items-center gap-6 text-right shrink-0">
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-black text-white font-mono leading-none">
+                          {item.averagePoints} Pts
+                        </p>
+                        <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading mt-0.5">
+                          Avg Score
+                        </p>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <p className="text-sm font-black text-green-400 font-mono leading-none">
+                          {item.attendanceRate}%
+                        </p>
+                        <p className="text-[8px] font-black uppercase text-zinc-555 tracking-wider font-heading mt-0.5">
+                          Attendance
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="divide-y divide-zinc-900">
-              {cohortView.map((item: any) => (
-                <div key={item.year} className="py-3 flex items-center justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <h4 className="text-xs font-black text-white font-heading">{item.year} Cohort</h4>
-                    <p className="text-[9px] text-zinc-550 font-bold uppercase">
-                      {item.count} registered scholars
-                    </p>
+            {/* Scholar Tier Distribution (Donut Chart) */}
+            <div className="p-4 bg-zinc-900/10 border border-zinc-850 rounded-2xl space-y-4">
+              <div>
+                <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest font-heading flex items-center gap-1">
+                  <RiPieChart2Line className="w-4 h-4 text-emerald-400" />
+                  Scholar Tier Distributions
+                </h3>
+                <p className="text-[9px] text-zinc-550 font-medium uppercase mt-0.5">
+                  Relative share of student scholars across JJK colony tiers
+                </p>
+              </div>
+
+              {tierDistribution.length === 0 ? (
+                <p className="text-center text-zinc-550 italic py-10 text-xs">No tier distribution indexed.</p>
+              ) : (
+                <div className="space-y-4 pt-1">
+                  <div className="relative flex items-center justify-center">
+                    <svg width="140" height="140" viewBox="0 0 120 120" className="overflow-visible">
+                      {/* Background track circle */}
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="40"
+                        fill="transparent"
+                        stroke="rgba(255,255,255,0.03)"
+                        strokeWidth="12"
+                      />
+                      
+                      {/* Segment Arcs */}
+                      {segments.map((seg: any, idx: number) => (
+                        <circle
+                          key={idx}
+                          cx="60"
+                          cy="60"
+                          r="40"
+                          fill="transparent"
+                          stroke={seg.color}
+                          strokeWidth="10"
+                          strokeDasharray="251.327"
+                          strokeDashoffset={seg.dashOffset}
+                          transform={`rotate(${seg.rotation - 90} 60 60)`}
+                          className="transition-all duration-300 hover:stroke-[12px] cursor-pointer"
+                        />
+                      ))}
+
+                      {/* Donut Center Hole text */}
+                      <circle cx="60" cy="60" r="30" className="fill-zinc-950/80" />
+                      <text x="60" y="58" textAnchor="middle" fill="#52525b" fontSize="6.5" fontWeight="bold" className="uppercase tracking-widest font-heading">Total</text>
+                      <text x="60" y="71" textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="black" className="font-mono">{totalTierStudents}</text>
+                    </svg>
                   </div>
 
-                  <div className="flex items-center gap-6 text-right shrink-0">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-black text-white font-mono leading-none">
-                        {item.averagePoints} Pts
-                      </p>
-                      <p className="text-[8px] font-black uppercase text-zinc-550 tracking-wider font-heading mt-0.5">
-                        Avg Score
-                      </p>
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-black text-green-400 font-mono leading-none">
-                        {item.attendanceRate}%
-                      </p>
-                      <p className="text-[8px] font-black uppercase text-zinc-555 tracking-wider font-heading mt-0.5">
-                        Attendance
-                      </p>
-                    </div>
+                  {/* Legends */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2 text-[9px] font-heading font-black">
+                    {segments.map((seg: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between py-1 border-b border-zinc-900/50 px-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                          <span className="text-zinc-400 truncate uppercase tracking-wider text-[8.5px]">{seg.name}</span>
+                        </div>
+                        <span className="text-white font-mono text-[9px] shrink-0 ml-2">
+                          {seg.value} <span className="text-zinc-650 text-[8px] font-bold">({Math.round(seg.percentage)}%)</span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
 
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
       {/* ────────────────────────────────────────────────────────
           TAB 4: BOS RANKINGS

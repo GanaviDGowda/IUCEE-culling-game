@@ -33,7 +33,7 @@ export async function GET() {
     .from("point_appeals")
     .select(`
       *,
-      user:users(id, name, email, avatar_url),
+      user:users!point_appeals_user_id_fkey(id, name, email, avatar_url),
       point_log:point_logs(id, points, type, note, created_at)
     `)
     .order("submitted_at", { ascending: false });

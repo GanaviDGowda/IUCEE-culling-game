@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     // 3. Fetch all project updates (weekly updates)
     const { data: updates } = await supabase
       .from("project_updates")
-      .select("*, project:projects(id, name), user:users(id, name)")
+      .select("*, project:projects(id, name), user:users!project_updates_user_id_fkey(id, name)")
       .order("submitted_at", { ascending: false });
 
     // 4. Map collaborators to each project

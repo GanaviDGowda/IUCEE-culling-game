@@ -52,11 +52,11 @@ export function AttendanceTab() {
 
   useEffect(() => {
     fetchMeetingsList();
-    fetchCieLocks();
   }, []);
 
   useEffect(() => {
     fetchAttendanceData(selectedMeetingId);
+    fetchCieLocks(selectedMeetingId);
   }, [selectedMeetingId]);
 
   async function fetchMeetingsList() {
@@ -69,12 +69,14 @@ export function AttendanceTab() {
     }
   }
 
-  async function fetchCieLocks() {
+  async function fetchCieLocks(meetingId = selectedMeetingId) {
     try {
       const years = ["1", "2", "3", "4"];
       const newLocks: Record<string, number> = {};
       for (const y of years) {
-        const res = await fetch(`/api/admin/cie-bonus?year=${y}`);
+        const resolvedMeetingId = meetingId === "active" ? meeting?.id : meetingId;
+        const suffix = resolvedMeetingId ? `&meetingId=${resolvedMeetingId}` : "";
+        const res = await fetch(`/api/admin/cie-bonus?year=${y}${suffix}`);
         const data = await res.json();
         newLocks[y] = data.days_remaining || 0;
       }
@@ -91,6 +93,9 @@ export function AttendanceTab() {
       const data = await res.json();
       if (data.data) {
         setMeeting(data.data.meeting);
+        if (data.data.meeting?.id) {
+          fetchCieLocks(data.data.meeting.id);
+        }
         const fetchedMembers = data.data.members || [];
         setMembers(fetchedMembers);
 
@@ -115,7 +120,7 @@ export function AttendanceTab() {
   // Row tap handler to cycle state: Unmarked -> Present -> Absent -> Unmarked
   const handleRowTap = (studentId: string) => {
     const student = members.find(m => m.id === studentId);
-    if (student?.has_cie_bonus) return; // Locked: do nothing
+    if (student?.attendance_locked || student?.has_cie_bonus) return; // Locked after save
 
     setLocalAttendance(prev => {
       const current = prev[studentId] || { present: null, used_skip_token: false, override_note: null };
@@ -133,7 +138,8 @@ export function AttendanceTab() {
         ...prev,
         [studentId]: {
           ...current,
-          present: nextPresent
+          present: nextPresent,
+          override_note: nextPresent === false ? current.override_note : null
         }
       };
     });
@@ -144,10 +150,11 @@ export function AttendanceTab() {
     setLocalAttendance(prev => {
       const updated = { ...prev };
       members.forEach(m => {
-        if (!m.has_cie_bonus) {
+        if (!m.attendance_locked && !m.has_cie_bonus) {
           updated[m.id] = {
             ...updated[m.id],
-            present: true
+            present: true,
+            override_note: null
           };
         }
       });
@@ -209,7 +216,7 @@ export function AttendanceTab() {
         alert(data.error || "Failed to grant CIE Bonus.");
       } else {
         alert(`Successfully granted CIE Bonus skip tokens to ${data.count} active students in Year ${year}!`);
-        fetchCieLocks(); // Refresh locks
+        fetchCieLocks(meeting.id); // Refresh locks
         fetchAttendanceData(meeting.id); // Reload skip token counts and card block states
       }
     } catch (err) {
@@ -222,8 +229,9 @@ export function AttendanceTab() {
 
   const openOverrideSheet = (e: React.MouseEvent, student: any) => {
     e.stopPropagation(); // Avoid triggering card tap
-    setOverrideStudent(student);
     const localVal = localAttendance[student.id];
+    if (student.attendance_locked || student.has_cie_bonus || localVal?.present !== false) return;
+    setOverrideStudent(student);
     setOverrideNoteText(localVal?.override_note || "");
     setIsOverrideOpen(true);
   };
@@ -234,7 +242,7 @@ export function AttendanceTab() {
       ...prev,
       [overrideStudent.id]: {
         ...prev[overrideStudent.id],
-        override_note: overrideNoteText
+        override_note: prev[overrideStudent.id]?.present === false ? overrideNoteText : null
       }
     }));
     setIsOverrideOpen(false);
@@ -261,6 +269,7 @@ export function AttendanceTab() {
   
   // Calculate if there are unsaved changes
   const hasChanges = members.some(m => {
+    if (m.attendance_locked || m.has_cie_bonus) return false;
     const local = localAttendance[m.id];
     const initialPresent = m.attendance ? m.attendance.present : null;
     const initialNote = m.attendance ? m.attendance.override_note : null;
@@ -269,6 +278,18 @@ export function AttendanceTab() {
       (local.present !== initialPresent || local.override_note !== initialNote)
     );
   });
+
+  const formatMeetingDate = (date?: string) => {
+    if (!date) return "Date TBA";
+    return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+  };
+
+  const formatMeetingTime = (time?: string) => time ? String(time).slice(0, 5) : "Time TBA";
 
   // Year theme color configs
   const yearThemes: Record<string, {
@@ -372,7 +393,7 @@ export function AttendanceTab() {
             <option value="active">-- Latest Active --</option>
             {meetingsList.map(meet => (
               <option key={meet.id} value={meet.id}>
-                {meet.title}
+                {meet.title} - {formatMeetingDate(meet.date)} {formatMeetingTime(meet.time)} - {meet.location || "Remote"}
               </option>
             ))}
           </select>
@@ -384,13 +405,14 @@ export function AttendanceTab() {
               variant="outline"
               className="flex-1 sm:flex-initial h-9 px-3 rounded-lg text-[11px] font-black border-zinc-800 text-zinc-400 hover:bg-zinc-900"
               onClick={handleBulkCheckIn}
+              disabled={!members.some(m => !m.attendance_locked && !m.has_cie_bonus)}
             >
               Mark All Present
             </Button>
             <Button 
               className="flex-1 sm:flex-initial h-9 px-3 rounded-lg text-[11px] font-black bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1"
               onClick={handleSaveAttendance}
-              disabled={saving}
+              disabled={saving || !hasChanges}
             >
               {saving ? "Saving..." : "Save Attendance"}
             </Button>
@@ -494,6 +516,9 @@ export function AttendanceTab() {
                 <h3 className="text-[11px] font-black text-white uppercase tracking-wider">
                   Active: {meeting.title}
                 </h3>
+                <p className="text-[9px] text-zinc-500 mt-0.5">
+                  {formatMeetingDate(meeting.date)} • {formatMeetingTime(meeting.time)} • {meeting.location || "Remote"}
+                </p>
               </div>
             </div>
 
@@ -517,7 +542,7 @@ export function AttendanceTab() {
             <div className="space-y-1.5">
               {sortedMembers.map((student) => {
                 const localState = localAttendance[student.id] || { present: null, used_skip_token: false, override_note: null };
-                const isBlocked = student.has_cie_bonus === true;
+                const isBlocked = student.attendance_locked === true || student.has_cie_bonus === true;
 
                 const yr = student.year ? String(student.year) : "Unassigned";
                 const theme = yearThemes[yr] || yearThemes["Unassigned"];
@@ -586,7 +611,7 @@ export function AttendanceTab() {
                       {isBlocked ? (
                         <div className="flex items-center gap-0.5 text-zinc-650 bg-zinc-950/30 px-1.5 py-0.5 rounded border border-zinc-900/40 text-[6px] font-black uppercase tracking-wider">
                           <RiLockLine className="w-2.5 h-2.5 text-amber-500/65 animate-pulse" />
-                          <span>Locked</span>
+                          <span>{student.has_cie_bonus ? "CIE Locked" : "Saved"}</span>
                         </div>
                       ) : (
                         <>
@@ -595,6 +620,7 @@ export function AttendanceTab() {
                             variant="outline"
                             className="h-6 px-1.5 rounded text-[7px] font-black border-zinc-855 text-zinc-455 hover:bg-zinc-900"
                             onClick={(e) => openOverrideSheet(e, student)}
+                            disabled={localState.present !== false}
                           >
                             Note
                           </Button>

@@ -45,7 +45,7 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("point_logs")
-    .select("*, user:users(id, name, email, avatar_url), awarded_by_user:users!point_logs_awarded_by_fkey(id, name)")
+    .select("*, user:users!point_logs_user_id_fkey(id, name, email, avatar_url), awarded_by_user:users!point_logs_awarded_by_fkey(id, name), meeting:meetings(id, title, date, time, location)")
     .order("created_at", { ascending: false })
     .limit(300);
 
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
     .from("point_logs")
     .update({ status: "confirmed", reviewed_by: adminId, reviewed_at: new Date().toISOString() })
     .in("id", logIds)
-    .select("*, user:users(id, name, email, avatar_url)");
+    .select("*, user:users!point_logs_user_id_fkey(id, name, email, avatar_url)");
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });

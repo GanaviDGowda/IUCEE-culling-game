@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   RiDashboardLine,
   RiGroupLine,
@@ -15,6 +16,7 @@ import {
 } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { name: "Home", href: "/home", icon: RiDashboardLine },
@@ -40,11 +42,35 @@ interface SidebarProps {
 
 export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
   const name = profile?.name || "Administrator";
   const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.refresh();
+    router.push("/auth/login");
+  };
+
+
   return (
-    <aside className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 bg-black border-r border-zinc-800 z-50">
+    <aside className="hidden md:flex flex-col w-64 h-full bg-black border-r border-zinc-800 shrink-0">
       <div className="flex items-center gap-3 p-6 border-b border-zinc-800">
         <div className="relative w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
           <Image src="/images/kogane.png" alt="Kogane" fill className="object-contain" />
@@ -81,8 +107,33 @@ export function Sidebar({ profile }: SidebarProps) {
         })}
       </div>
       
-      <div className="p-4 border-t border-zinc-800">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-zinc-900/30 border border-zinc-800/50">
+      <div ref={menuRef} className="p-4 border-t border-zinc-800 relative">
+        {menuOpen && (
+          <div className="absolute bottom-16 left-4 right-4 bg-zinc-950 border border-zinc-800 rounded-xl p-2 shadow-2xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                router.push(profile?.role === "admin" ? "/admin/more" : "/student/more");
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+            >
+              View Settings & Profile
+            </button>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                handleSignOut();
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-950/10 transition-colors border-t border-zinc-900 mt-1 pt-2"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
+        <div 
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="flex items-center gap-3 p-2 rounded-lg bg-zinc-900/30 border border-zinc-800/50 hover:bg-zinc-900/60 cursor-pointer transition-colors"
+        >
           <Avatar className="w-8 h-8 border border-zinc-700">
             <AvatarFallback className="bg-zinc-800 text-xs font-bold text-zinc-400">
               {initials}

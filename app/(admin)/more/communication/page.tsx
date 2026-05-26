@@ -16,7 +16,7 @@ import {
   RiCheckDoubleLine
 } from "@remixicon/react";
 
-type TargetType = "all" | "branch" | "tier" | "individual";
+type TargetType = "all" | "branch" | "year" | "tier" | "individual";
 
 export default function AdminCommunicationDashboard() {
   const [loading, setLoading] = useState(true);
@@ -140,8 +140,8 @@ export default function AdminCommunicationDashboard() {
             {/* Target Scope Selectors */}
             <div className="space-y-1">
               <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Broadcast Target</label>
-              <div className="grid grid-cols-4 gap-1 bg-zinc-950 p-1 border border-zinc-850 rounded-xl">
-                {(["all", "branch", "tier", "individual"] as TargetType[]).map((t) => (
+              <div className="grid grid-cols-5 gap-1 bg-zinc-950 p-1 border border-zinc-850 rounded-xl">
+                {(["all", "branch", "year", "tier", "individual"] as TargetType[]).map((t) => (
                   <button
                     key={t}
                     type="button"
@@ -164,7 +164,7 @@ export default function AdminCommunicationDashboard() {
             {/* Dynamic Target value fields */}
             {target === "branch" && (
               <div className="space-y-1 animate-in slide-in-from-top-1 duration-200">
-                <label className="text-[9px] font-black text-zinc-500 uppercase tracking-wider font-heading">Select Department Branch</label>
+                <label className="text-[9px] font-black text-zinc-550 uppercase tracking-wider font-heading">Select Department Branch</label>
                 <select
                   value={targetValue}
                   onChange={(e) => setTargetValue(e.target.value)}
@@ -176,6 +176,24 @@ export default function AdminCommunicationDashboard() {
                   <option value="ISE">ISE Department</option>
                   <option value="ECE">ECE Department</option>
                   <option value="EEE">EEE Department</option>
+                </select>
+              </div>
+            )}
+
+            {target === "year" && (
+              <div className="space-y-1 animate-in slide-in-from-top-1 duration-200">
+                <label className="text-[9px] font-black text-zinc-550 uppercase tracking-wider font-heading">Select Year Group</label>
+                <select
+                  value={targetValue}
+                  onChange={(e) => setTargetValue(e.target.value)}
+                  className="w-full h-9 bg-zinc-950 border border-zinc-850 rounded-xl px-3 text-xs text-white focus:outline-none"
+                  required
+                >
+                  <option value="">-- Pick year --</option>
+                  <option value="1">1st Year</option>
+                  <option value="2">2nd Year</option>
+                  <option value="3">3rd Year</option>
+                  <option value="4">4th Year</option>
                 </select>
               </div>
             )}

@@ -41,6 +41,13 @@ export async function GET() {
 
     if (sErr) throw sErr;
 
+    const { data: ticketTypes, error: ticketErr } = await supabase
+      .from("ticket_types")
+      .select("*")
+      .order("active_point_cost", { ascending: false });
+
+    if (ticketErr) throw ticketErr;
+
     // 5. Fetch point rules from static/dynamic mock config
     const pointRules = {
       attendance: 10,
@@ -58,6 +65,7 @@ export async function GET() {
       holidays: holidays || [],
       badges: badges || [],
       students: students || [],
+      ticketTypes: ticketTypes || [],
       pointRules
     });
 
@@ -88,7 +96,36 @@ export async function POST(req: Request) {
       .eq("auth_id", user.id)
       .single();
 
-    if (!adminUser || adminUser.role !== "admin") {
+    if (!adminUser || !["admin", "nodal_officer"].includes(adminUser.role)) {
+      return NextResponse.json({ error: "Privileged access required" }, { status: 403 });
+    }
+
+    if (action === "upsert_ticket_type") {
+      if (adminUser.role !== "nodal_officer") {
+        return NextResponse.json({ error: "Only the nodal officer can change ticket rules" }, { status: 403 });
+      }
+
+      const { code, name, active_point_cost, description, approval_mode, enabled } = payload;
+      const { data, error } = await supabase
+        .from("ticket_types")
+        .upsert({
+          code,
+          name,
+          active_point_cost,
+          description,
+          approval_mode,
+          enabled,
+          updated_by: adminUser.id,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "code" })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, ticket_type: data });
+    }
+
+    if (adminUser.role !== "admin") {
       return NextResponse.json({ error: "Admin privilege required" }, { status: 403 });
     }
 
@@ -99,7 +136,7 @@ export async function POST(req: Request) {
       if (is_current) {
         await supabase
           .from("quarters")
-          .update({ is_current: false })
+          .update({ is_current: false, is_active: false })
           .eq("is_current", true);
       }
 
@@ -110,7 +147,9 @@ export async function POST(req: Request) {
           start_date,
           end_date,
           is_current: !!is_current,
-          is_archived: false
+          is_active: !!is_current,
+          is_archived: false,
+          archived: false
         }])
         .select()
         .single();
@@ -123,7 +162,7 @@ export async function POST(req: Request) {
       const { id } = payload;
       const { data, error } = await supabase
         .from("quarters")
-        .update({ is_archived: true, is_current: false })
+        .update({ is_archived: true, is_current: false, is_active: false, archived: true })
         .eq("id", id)
         .select()
         .single();
@@ -138,12 +177,12 @@ export async function POST(req: Request) {
       // Clear previous current
       await supabase
         .from("quarters")
-        .update({ is_current: false })
-        .eq("is_current", true);
+        .update({ is_current: false, is_active: false })
+        .or("is_current.eq.true,is_active.eq.true");
 
       const { data, error } = await supabase
         .from("quarters")
-        .update({ is_current: true })
+        .update({ is_current: true, is_active: true })
         .eq("id", id)
         .select()
         .single();
@@ -205,6 +244,59 @@ export async function POST(req: Request) {
 
       if (error) throw error;
       return NextResponse.json({ success: true, badge: data });
+    }
+
+    if (action === "update_quarter_dates") {
+      const { id, label, start_date, end_date } = payload;
+      const { data, error } = await supabase
+        .from("quarters")
+        .update({
+          label,
+          start_date,
+          end_date
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return NextResponse.json({ success: true, quarter: data });
+    }
+
+    if (action === "end_quarter_early") {
+      const { id } = payload;
+
+      // 1. Recalculate tiers for all students to lock in final achievements
+      const { error: rpcError } = await supabase.rpc("recalculate_tiers");
+      if (rpcError) throw rpcError;
+
+      // 2. Archive and deactivate the completed semester
+      const { error: archiveError } = await supabase
+        .from("quarters")
+        .update({
+          is_current: false,
+          is_active: false,
+          is_archived: true,
+          archived: true
+        })
+        .eq("id", id);
+      if (archiveError) throw archiveError;
+
+      // 3. Reset quarterly/semester points and grace tokens for active students for the new semester
+      const { error: resetError } = await supabase
+        .from("users")
+        .update({
+          redeemable_pts: 0,
+          current_quarter_pts: 0,
+          grace_used: false,
+          status: "danger_zone",
+          tier: "active"
+        })
+        .eq("role", "student")
+        .neq("status", "removed");
+      if (resetError) throw resetError;
+
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: "Unsupported system action method" }, { status: 400 });

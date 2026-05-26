@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: studentsError?.message || "Failed to load student profiles" }, { status: 500 });
     }
 
-    // 2. Fetch all confirmed point logs to compute period rankings and domain scoring
+    // 2. Fetch confirmed point logs to compute the fast-rising indicator and domain scoring.
     const { data: logs, error: logsError } = await supabase
       .from("point_logs")
       .select("user_id, points, type, created_at")
@@ -54,12 +54,7 @@ export async function GET(request: Request) {
     const now = Date.now();
     const oneDayMs = 24 * 60 * 60 * 1000;
     const sevenDaysMs = 7 * oneDayMs;
-    const thirtyDaysMs = 30 * oneDayMs;
-    const ninetyDaysMs = 90 * oneDayMs;
-
-    // Helper: Compute points earned by each student in specific time periods
-    const pointsMonthly: Record<string, number> = {};
-    const pointsQuarterly: Record<string, number> = {};
+    // Helper: Compute recent positive movement for the main active ranking.
     const pointsRising: Record<string, number> = {};
 
     // Domain matrices
@@ -79,13 +74,6 @@ export async function GET(request: Request) {
       if (elapsed <= sevenDaysMs) {
         pointsRising[uid] = (pointsRising[uid] || 0) + pts;
       }
-      if (elapsed <= thirtyDaysMs) {
-        pointsMonthly[uid] = (pointsMonthly[uid] || 0) + pts;
-      }
-      if (elapsed <= ninetyDaysMs) {
-        pointsQuarterly[uid] = (pointsQuarterly[uid] || 0) + pts;
-      }
-
       // Domain classifications
       if (["attendance", "event_1st", "event_2nd", "event_participation"].includes(log.type)) {
         pointsTech[uid] = (pointsTech[uid] || 0) + pts;
@@ -105,19 +93,16 @@ export async function GET(request: Request) {
     });
 
     // 3. Main Rankings calculations
-    const rankAllTime = [...students].sort((a, b) => b.lifetime_pts - a.lifetime_pts).slice(0, 20);
-    const rankQuarterly = [...students]
-      .map((s) => ({ ...s, period_pts: pointsQuarterly[s.id] || 0 }))
-      .sort((a, b) => b.period_pts - a.period_pts)
+    const mainRanking = [...students]
+      .map((s) => ({
+        ...s,
+        active_pts: s.redeemable_pts,
+        fast_rising: (pointsRising[s.id] || 0) > 0,
+        rising_pts: pointsRising[s.id] || 0,
+      }))
+      .sort((a, b) => b.redeemable_pts - a.redeemable_pts)
       .slice(0, 20);
-    const rankMonthly = [...students]
-      .map((s) => ({ ...s, period_pts: pointsMonthly[s.id] || 0 }))
-      .sort((a, b) => b.period_pts - a.period_pts)
-      .slice(0, 20);
-    const rankRising = [...students]
-      .map((s) => ({ ...s, period_pts: pointsRising[s.id] || 0 }))
-      .sort((a, b) => b.period_pts - a.period_pts)
-      .slice(0, 20);
+    const bosRanking = [...students].sort((a, b) => b.lifetime_pts - a.lifetime_pts).slice(0, 20);
 
     // 4. Domain Rankings calculations
     const getDomainRank = (scoreMap: Record<string, number>) => {
@@ -160,17 +145,15 @@ export async function GET(request: Request) {
       }
 
       // Century users
-      if (s.lifetime_pts >= 100 || s.tier === "century") {
+      if (s.redeemable_pts >= 100 || s.tier === "century") {
         centuryUsersCount++;
       }
     });
 
     return NextResponse.json({
       main: {
-        all_time: rankAllTime,
-        quarterly: rankQuarterly,
-        monthly: rankMonthly,
-        rising: rankRising,
+        ranking: mainRanking,
+        bos: bosRanking,
       },
       domain: domainRankings,
       distribution: {

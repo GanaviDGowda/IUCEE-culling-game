@@ -112,7 +112,7 @@ export async function GET() {
         const b = u.branch || "Unknown";
         if (!acc[b]) acc[b] = { count: 0, pts: 0 };
         acc[b].count++;
-        acc[b].pts += u.lifetime_pts;
+        acc[b].pts += u.redeemable_pts;
         return acc;
       }, {} as Record<string, { count: number; pts: number }>) || {}
     ).map(([branch, meta]) => ({
@@ -123,7 +123,7 @@ export async function GET() {
 
     const cohortView = [1, 2, 3, 4].map(yr => {
       const cohortUsers = users?.filter(u => u.year === yr) || [];
-      const totalPts = cohortUsers.reduce((sum, u) => sum + u.lifetime_pts, 0);
+      const totalPts = cohortUsers.reduce((sum, u) => sum + u.redeemable_pts, 0);
       const avgPts = cohortUsers.length > 0 ? Math.round(totalPts / cohortUsers.length) : 0;
       
       // Calculate attendance average for this cohort
@@ -142,6 +142,21 @@ export async function GET() {
         count: cohortUsers.length
       };
     });
+
+    // Calculate tier distribution
+    const tierCounts = users?.reduce((acc, u) => {
+      const t = u.tier || "active";
+      acc[t] = (acc[t] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>) || {};
+
+    const tierDistribution = [
+      { name: "Active", value: tierCounts["active"] || 0, color: "#10B981" },
+      { name: "Contributor", value: tierCounts["contributor"] || 0, color: "#3B82F6" },
+      { name: "Elite", value: tierCounts["elite"] || 0, color: "#8B5CF6" },
+      { name: "Domain Master", value: tierCounts["domain_master"] || 0, color: "#F59E0B" },
+      { name: "Century Outlaws", value: tierCounts["century"] || 0, color: "#EF4444" },
+    ].filter(item => item.value > 0);
 
     // 5. BOS Rankings (Best Outgoing Student Candidates)
     // Mentorship score = sum of confirmed logs where type = 'mentorship_bonus' or notes contains 'mentorship'
@@ -184,7 +199,8 @@ export async function GET() {
       },
       demographics: {
         branchComparison,
-        cohortView
+        cohortView,
+        tierDistribution
       },
       bos: {
         rankings: bosRankings
